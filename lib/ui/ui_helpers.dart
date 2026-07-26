@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../src/biometric.dart';
 import '../src/models.dart';
 import '../theme.dart';
 
@@ -95,8 +96,12 @@ IconData categoryIcon(Category c) {
 /// A single extracted field: label, value (masked until revealed for sensitive
 /// ones), a biometric-style reveal toggle, and tap-to-copy.
 class MaskedField extends StatefulWidget {
-  const MaskedField({super.key, required this.field});
+  const MaskedField({super.key, required this.field, this.confirmReveal});
   final ExtractedField field;
+
+  /// Gate applied before revealing a sensitive value (defaults to device
+  /// biometrics). Injectable so widget tests can bypass the platform channel.
+  final Future<bool> Function(String reason)? confirmReveal;
 
   @override
   State<MaskedField> createState() => _MaskedFieldState();
@@ -145,7 +150,15 @@ class _MaskedFieldState extends State<MaskedField> {
               icon: Icon(_revealed ? Icons.lock_open : Icons.lock_outline),
               color: _revealed ? c.accent : c.inkDim,
               tooltip: _revealed ? 'Hide' : 'Reveal',
-              onPressed: () => setState(() => _revealed = !_revealed),
+              onPressed: () async {
+                if (_revealed) {
+                  setState(() => _revealed = false);
+                  return;
+                }
+                final gate = widget.confirmReveal ?? (r) => Biometric().confirm(r);
+                final ok = await gate('Reveal ${widget.field.label}');
+                if (ok && mounted) setState(() => _revealed = true);
+              },
             ),
           IconButton(
             icon: const Icon(Icons.copy_rounded),
