@@ -60,6 +60,15 @@ class VaultStore {
     }
   }
 
+  // --- preference: also delete the gallery original when removing a record ---
+  static const _deleteOriginalsName = 'picsearch_delete_originals';
+
+  Future<bool> deleteOriginals() async =>
+      (await _secure.read(key: _deleteOriginalsName)) == 'true';
+
+  Future<void> setDeleteOriginals(bool v) =>
+      _secure.write(key: _deleteOriginalsName, value: v.toString());
+
   // --- processed gallery asset ids (not sensitive → plain file) ---
   Future<File> _idsFile() async {
     final dir = await getApplicationSupportDirectory();

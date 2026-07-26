@@ -38,6 +38,10 @@ class AppState extends ChangeNotifier {
   int modelPercent = 0;
   String? modelError;
 
+  /// Preference: when removing a record, also delete the gallery original.
+  /// Off by default — destructive, so opt-in from Settings.
+  bool deleteOriginals = false;
+
   /// Load previously saved (encrypted) records on startup.
   Future<void> init() async {
     final saved = await _store.load();
@@ -45,6 +49,7 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(_dedupe(saved));
     geminiKey = await _store.geminiKey();
+    deleteOriginals = await _store.deleteOriginals();
     processedIds
       ..clear()
       ..addAll(await _store.loadProcessedIds());
@@ -52,6 +57,12 @@ class AppState extends ChangeNotifier {
     if (LocalGemma.isReady && !hasGemini) aiMode = AiMode.local;
     notifyListeners();
     refreshNewCount(); // best-effort; may prompt for gallery access
+  }
+
+  Future<void> setDeleteOriginals(bool v) async {
+    deleteOriginals = v;
+    await _store.setDeleteOriginals(v);
+    notifyListeners();
   }
 
   /// Count gallery screenshots not yet read into the vault.
@@ -88,6 +99,7 @@ class AppState extends ChangeNotifier {
         final file = await a.file;
         if (file != null) {
           var rec = await _pipeline.scanOne(file.path);
+          rec = rec.copyWith(assetId: a.id); // remember the gallery original
           try {
             rec = rec.copyWith(imagePath: await _images.store(file.path));
           } catch (_) {/* keep original path if the copy fails */}
@@ -140,11 +152,48 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Remove records from the vault and persist. (Clears from PicSearch's vault,
-  /// not from the phone's gallery — deleting the original photo is a separate,
-  /// permission-gated OS action, deliberately out of scope for now.)
+  /// Ingest images shared *into* the app (from another app's share sheet) —
+  /// same pipeline as a scan, so any image (not just a screenshot) can be added.
+  Future<int> addSharedImages(List<String> paths) async {
+    if (paths.isEmpty || scanning) return 0;
+    scanning = true;
+    scanTotal = paths.length;
+    scanDone = 0;
+    notifyListeners();
+    try {
+      final recs = <ScreenshotRecord>[];
+      for (final p in paths) {
+        var rec = await _pipeline.scanOne(p);
+        try {
+          rec = rec.copyWith(imagePath: await _images.store(p));
+        } catch (_) {/* keep original path if the copy fails */}
+        recs.add(rec);
+        scanDone++;
+        notifyListeners();
+      }
+      _addRecords(recs);
+      await _store.save(records);
+      return recs.length;
+    } finally {
+      scanning = false;
+      notifyListeners();
+      if (aiReady) unawaited(regroupWithAi());
+    }
+  }
+
+  /// Remove records from the vault and persist. Clears from PicSearch's vault;
+  /// only if [deleteOriginals] is on does it also delete the gallery originals
+  /// (via a system confirm dialog — see GalleryScanner.deleteAssets).
   Future<void> removeRecords(Iterable<ScreenshotRecord> toRemove) async {
     final set = toRemove.toSet();
+    if (deleteOriginals) {
+      final ids = set.map((r) => r.assetId).whereType<String>().toList();
+      if (ids.isNotEmpty) {
+        try {
+          await _gallery.deleteAssets(ids);
+        } catch (_) {/* user cancelled or no permission — vault removal still proceeds */}
+      }
+    }
     records.removeWhere(set.contains);
     await _store.save(records);
     notifyListeners();

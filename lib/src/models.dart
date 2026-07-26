@@ -118,6 +118,11 @@ class ScreenshotRecord {
   final bool aiClearable;
   final String? aiClearReason;
 
+  /// The gallery (MediaStore) asset id this record came from, when scanned from
+  /// the device gallery — lets us optionally delete the original. Null for
+  /// picked/shared images (no gallery asset to delete).
+  final String? assetId;
+
   const ScreenshotRecord({
     required this.imagePath,
     required this.ocrText,
@@ -126,6 +131,7 @@ class ScreenshotRecord {
     this.aiGroup,
     this.aiClearable = false,
     this.aiClearReason,
+    this.assetId,
   });
 
   Category get category => analysis.category;
@@ -137,6 +143,7 @@ class ScreenshotRecord {
     String? aiGroup,
     bool? aiClearable,
     String? aiClearReason,
+    String? assetId,
   }) =>
       ScreenshotRecord(
         imagePath: imagePath ?? this.imagePath,
@@ -146,6 +153,7 @@ class ScreenshotRecord {
         aiGroup: aiGroup ?? this.aiGroup,
         aiClearable: aiClearable ?? this.aiClearable,
         aiClearReason: aiClearReason ?? this.aiClearReason,
+        assetId: assetId ?? this.assetId,
       );
 
   Map<String, dynamic> toJson() => {
@@ -156,6 +164,7 @@ class ScreenshotRecord {
         'aiGroup': aiGroup,
         'aiClearable': aiClearable,
         'aiClearReason': aiClearReason,
+        'assetId': assetId,
       };
 
   factory ScreenshotRecord.fromJson(Map<String, dynamic> j) => ScreenshotRecord(
@@ -168,5 +177,6 @@ class ScreenshotRecord {
         aiGroup: j['aiGroup'] as String?,
         aiClearable: (j['aiClearable'] as bool?) ?? false,
         aiClearReason: j['aiClearReason'] as String?,
+        assetId: j['assetId'] as String?,
       );
 }

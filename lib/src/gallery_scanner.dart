@@ -18,4 +18,12 @@ class GalleryScanner {
     final count = await album.assetCountAsync;
     return album.getAssetListRange(start: 0, end: count < limit ? count : limit);
   }
+
+  /// Delete gallery originals by asset id. On Android 11+ this triggers the
+  /// system's delete-confirmation dialog, so it can never delete silently.
+  /// Returns the ids actually removed.
+  Future<List<String>> deleteAssets(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    return PhotoManager.editor.deleteWithIds(ids);
+  }
 }

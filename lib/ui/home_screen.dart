@@ -50,6 +50,16 @@ class HomeScreen extends StatelessWidget {
                             : '$count screenshot${count == 1 ? '' : 's'}, read & ready',
                         style: TextStyle(color: c.inkDim, fontSize: 13),
                       ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Text(
+                          'Auto-reads your Screenshots album. Tap Scan — or share any '
+                          'image to PicSearch — to add anything else.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: c.inkFaint, fontSize: 11.5, height: 1.4),
+                        ),
+                      ),
                     ],
                   ),
                 ),

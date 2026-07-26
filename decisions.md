@@ -503,3 +503,33 @@ to the VPA (a heuristic, for screenshots that print only the handle). It's a
 `upi://` glyphs and can't see data that's *only* inside the QR pixels. Decoding the
 barcode is the reliable source — and it feeds the exact same parser + name
 extraction, so it was additive, not a rewrite.
+
+---
+
+## 21. Share-in, light-by-default, and opt-in original-delete
+
+A batch of UX calls from live testing:
+
+**Share-to-app.** Added `SEND`/`SEND_MULTIPLE` (`image/*`) intent-filters + a
+self-contained `picsearch/share` platform channel (`MainActivity.kt`) that copies
+the shared content:// image to cache and hands Flutter a file path →
+`AppState.addSharedImages` runs the same scan pipeline. Chose a hand-rolled
+channel over `receive_sharing_intent` for the same reason as elsewhere — no
+fragile native dep (file_picker had already burned the build).
+
+**Only screenshots, and we say so.** Auto-detect stays screenshot-album-only (the
+product's premise; scanning every camera photo would be noisy). But a Home note now
+states it — "Auto-reads your Screenshots album. Tap Scan — or share any image — to
+add anything else" — with Scan (pick) and share as the escape hatches.
+
+**Light by default.** Flipped the default `themeMode` to light (still toggleable).
+This surfaced a latent bug: the scan overlay was a bare `Container` sitting as a
+`Stack` sibling of the `Scaffold`, so its text had no `Material` ancestor and
+Flutter drew the yellow debug underline — invisible on dark, glaring on light.
+Fixed by making the overlay a `Material`.
+
+**Delete the original — opt-in.** "Remove from PicSearch" stays vault-only by
+default. A Settings toggle (off by default) makes removal *also* delete the gallery
+original via `photo_manager.deleteWithIds`, which triggers the OS confirm dialog
+(never silent). Needed a new `assetId` on records (set during the gallery scan;
+null for picked/shared images, which therefore can't be device-deleted — correct).

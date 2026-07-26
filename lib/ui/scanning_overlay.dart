@@ -32,42 +32,45 @@ class _ScanningOverlayState extends State<ScanningOverlay>
     final c = context.pic;
     final progress = widget.total == 0 ? null : widget.done / widget.total;
     return Positioned.fill(
-      child: Container(
+      // Material (not a bare Container) so the Text has a Material ancestor —
+      // otherwise Flutter paints the yellow debug underline under it.
+      child: Material(
         color: c.ground.withValues(alpha: 0.94),
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 150,
-              height: 150,
-              child: AnimatedBuilder(
-                animation: _c,
-                builder: (_, _) => CustomPaint(
-                  painter: _ScanPainter(_c.value, c.accent, c.glow, c.line),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 150,
+                height: 150,
+                child: AnimatedBuilder(
+                  animation: _c,
+                  builder: (_, _) => CustomPaint(
+                    painter: _ScanPainter(_c.value, c.accent, c.glow, c.line),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 30),
-            Text('Reading your screenshots',
-                style: TextStyle(color: c.ink, fontSize: 18, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Text('${widget.done} of ${widget.total}',
-                style: dataStyle.copyWith(color: c.accent, fontSize: 15)),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: 190,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: c.surface2,
-                  valueColor: AlwaysStoppedAnimation(c.accent),
+              const SizedBox(height: 30),
+              Text('Reading your screenshots',
+                  style: TextStyle(color: c.ink, fontSize: 18, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text('${widget.done} of ${widget.total}',
+                  style: dataStyle.copyWith(color: c.accent, fontSize: 15)),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: 190,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: c.surface2,
+                    valueColor: AlwaysStoppedAnimation(c.accent),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

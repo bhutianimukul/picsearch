@@ -117,8 +117,9 @@ const TextStyle labelStyle = TextStyle(
   fontWeight: FontWeight.w600,
 );
 
-/// App-wide theme mode. Toggled from Settings; the app listens and rebuilds.
-final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.dark);
+/// App-wide theme mode. Light by default; toggled from Settings (the app listens
+/// and rebuilds).
+final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
 
 ThemeData buildTheme(Brightness brightness) {
   final pic = brightness == Brightness.dark ? PicColors.dark : PicColors.light;
