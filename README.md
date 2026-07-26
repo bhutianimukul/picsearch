@@ -249,9 +249,17 @@ redaction, and response parsing — is pure and synchronous, so it runs under
 3. Open any record to **reveal** (biometric) and **copy** a value, or act on it
    (**Pay via UPI**, add a private field, remove).
 4. **Search** from Home — type or hold the mic — e.g. *“my hdfc card”*, *“airbnb wifi”*.
-5. **(Optional) Turn on AI:** Settings → paste a free Gemini key
-   (`aistudio.google.com` → *Get API key*). The Vault regroups into **smart
-   folders**, cleanup goes AI-judged, and **Ask Gemini** answers questions.
+5. **(Optional) Turn on AI — pick an engine in Settings:**
+   - **Cloud (Gemini):** paste a free key (`aistudio.google.com` → *Get API key*) —
+     verified live on Save.
+   - **On-device (Gemma, no key/network):** under *On-device model*, tap **Open the
+     model page**, accept Gemma's licence and copy a free **Hugging Face read
+     token**, paste it, then **Download Gemma 3 1B**. Switch to **On-device** once it
+     lands. *(A real phone with a few GB RAM — MediaPipe LLM won't run on an
+     emulator; the model must be a MediaPipe `.task`.)*
+
+   Either way the Vault regroups into **smart folders**, cleanup goes AI-judged, and
+   **Ask AI** answers questions.
 
 ---
 
