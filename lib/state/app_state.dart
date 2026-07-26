@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../src/gallery_scanner.dart';
 import '../src/gemini.dart';
 import '../src/models.dart';
 import '../src/scan_pipeline.dart';
@@ -14,12 +15,15 @@ class AppState extends ChangeNotifier {
   final ScanPipeline _pipeline;
   final VaultStore _store;
   final ImagePicker _picker = ImagePicker();
+  final GalleryScanner _gallery = GalleryScanner();
 
   final List<ScreenshotRecord> records = <ScreenshotRecord>[];
   bool scanning = false;
   int scanTotal = 0;
   int scanDone = 0;
   String? geminiKey;
+  final Set<String> processedIds = <String>{};
+  int newCount = 0;
 
   /// Load previously saved (encrypted) records on startup.
   Future<void> init() async {
@@ -28,7 +32,59 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(saved);
     geminiKey = await _store.geminiKey();
+    processedIds
+      ..clear()
+      ..addAll(await _store.loadProcessedIds());
     notifyListeners();
+    refreshNewCount(); // best-effort; may prompt for gallery access
+  }
+
+  /// Count gallery screenshots not yet read into the vault.
+  Future<void> refreshNewCount() async {
+    try {
+      if (!await _gallery.ensurePermission()) return;
+      final assets = await _gallery.screenshots();
+      newCount = assets.where((a) => !processedIds.contains(a.id)).length;
+      notifyListeners();
+    } catch (_) {
+      /* gallery access unavailable — leave newCount as-is */
+    }
+  }
+
+  /// Scan only the screenshots we haven't processed yet.
+  Future<int> scanNewScreenshots() async {
+    if (scanning) return 0;
+    if (!await _gallery.ensurePermission()) return 0;
+    final assets = (await _gallery.screenshots())
+        .where((a) => !processedIds.contains(a.id))
+        .toList();
+    if (assets.isEmpty) {
+      newCount = 0;
+      notifyListeners();
+      return 0;
+    }
+    scanning = true;
+    scanTotal = assets.length;
+    scanDone = 0;
+    notifyListeners();
+    try {
+      final recs = <ScreenshotRecord>[];
+      for (final a in assets) {
+        final file = await a.file;
+        if (file != null) recs.add(await _pipeline.scanOne(file.path));
+        processedIds.add(a.id);
+        scanDone++;
+        notifyListeners();
+      }
+      records.insertAll(0, recs);
+      await _store.save(records);
+      await _store.saveProcessedIds(processedIds);
+      newCount = 0;
+      return recs.length;
+    } finally {
+      scanning = false;
+      notifyListeners();
+    }
   }
 
   /// Pick screenshots from the gallery, run the pipeline, persist.

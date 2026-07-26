@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:encrypt/encrypt.dart';
@@ -57,5 +58,28 @@ class VaultStore {
     } else {
       await _secure.write(key: _geminiKeyName, value: key.trim());
     }
+  }
+
+  // --- processed gallery asset ids (not sensitive → plain file) ---
+  Future<File> _idsFile() async {
+    final dir = await getApplicationSupportDirectory();
+    return File('${dir.path}/processed_ids.json');
+  }
+
+  Future<Set<String>> loadProcessedIds() async {
+    try {
+      final f = await _idsFile();
+      if (!await f.exists()) return {};
+      return (jsonDecode(await f.readAsString()) as List)
+          .map((e) => e as String)
+          .toSet();
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> saveProcessedIds(Set<String> ids) async {
+    final f = await _idsFile();
+    await f.writeAsString(jsonEncode(ids.toList()));
   }
 }

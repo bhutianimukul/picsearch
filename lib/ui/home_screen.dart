@@ -33,6 +33,7 @@ class HomeScreen extends StatelessWidget {
                     Icon(Icons.lock_outline, color: c.inkDim, size: 20),
                   ],
                 ),
+                if (state.newCount > 0) _NewBanner(count: state.newCount),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -72,6 +73,52 @@ void _openSearch(BuildContext context, [String query = '']) {
   Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => SearchScreen(initialQuery: query)),
   );
+}
+
+class _NewBanner extends StatelessWidget {
+  const _NewBanner({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Material(
+        color: Color.alphaBlend(c.accent.withValues(alpha: 0.10), c.surface),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => AppScope.of(context).scanNewScreenshots(),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.accent.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome_motion, color: c.accent, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('$count new screenshot${count == 1 ? '' : 's'}',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      Text('Tap to read & sort',
+                          style: TextStyle(color: c.inkDim, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                Text('Sort', style: TextStyle(color: c.accent, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Ghost extends StatelessWidget {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../src/models.dart';
+import '../src/validators.dart';
 import '../theme.dart';
 import 'ui_helpers.dart';
 
@@ -13,6 +15,8 @@ class RecordDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.pic;
+    final upiField = record.fields.where((f) => f.type == DocType.upiQr);
+    final upiVpa = upiField.isEmpty ? null : upiField.first.value;
     return Scaffold(
       appBar: AppBar(title: Text(categoryLabel(record.category))),
       body: ListView(
@@ -48,6 +52,19 @@ class RecordDetail extends StatelessWidget {
               ]),
             ),
           const SizedBox(height: 16),
+          if (upiVpa != null) ...[
+            FilledButton.icon(
+              onPressed: () => _payUpi(context, upiVpa),
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('Pay via UPI'),
+              style: FilledButton.styleFrom(
+                backgroundColor: c.accent,
+                foregroundColor: c.accentInk,
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 9),
+          ],
           OutlinedButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.delete_outline),
@@ -65,6 +82,19 @@ class RecordDetail extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _payUpi(BuildContext context, String vpa) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final ok = await launchUrl(Uri.parse('upi://pay?pa=$vpa&cu=INR'),
+          mode: LaunchMode.externalApplication);
+      if (!ok) {
+        messenger.showSnackBar(const SnackBar(content: Text('No UPI app found')));
+      }
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('No UPI app found')));
+    }
   }
 }
 
