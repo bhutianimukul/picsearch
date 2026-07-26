@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import 'home_screen.dart';
+import 'scanning_overlay.dart';
 import 'settings_screen.dart';
 import 'vault_screen.dart';
 
@@ -30,18 +31,25 @@ class _RootShellState extends State<RootShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _index,
-        children: const [HomeScreen(), VaultScreen(), SettingsScreen()],
-      ),
-      bottomNavigationBar: _BottomBar(
-        index: _index,
-        onHome: () => setState(() => _index = 0),
-        onVault: () => setState(() => _index = 1),
-        onScan: _scan,
-        onSettings: () => setState(() => _index = 2),
-      ),
+    final state = AppScope.of(context); // depend on scanning/progress
+    return Stack(
+      children: [
+        Scaffold(
+          body: IndexedStack(
+            index: _index,
+            children: const [HomeScreen(), VaultScreen(), SettingsScreen()],
+          ),
+          bottomNavigationBar: _BottomBar(
+            index: _index,
+            onHome: () => setState(() => _index = 0),
+            onVault: () => setState(() => _index = 1),
+            onScan: _scan,
+            onSettings: () => setState(() => _index = 2),
+          ),
+        ),
+        if (state.scanning)
+          ScanningOverlay(done: state.scanDone, total: state.scanTotal),
+      ],
     );
   }
 }

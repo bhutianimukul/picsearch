@@ -16,6 +16,8 @@ class AppState extends ChangeNotifier {
 
   final List<ScreenshotRecord> records = <ScreenshotRecord>[];
   bool scanning = false;
+  int scanTotal = 0;
+  int scanDone = 0;
 
   /// Load previously saved (encrypted) records on startup.
   Future<void> init() async {
@@ -33,9 +35,16 @@ class AppState extends ChangeNotifier {
     if (files.isEmpty) return 0;
 
     scanning = true;
+    scanTotal = files.length;
+    scanDone = 0;
     notifyListeners();
     try {
-      final recs = await _pipeline.scanAll(files.map((f) => f.path));
+      final recs = <ScreenshotRecord>[];
+      for (final f in files) {
+        recs.add(await _pipeline.scanOne(f.path));
+        scanDone++;
+        notifyListeners(); // drive the progress overlay
+      }
       records.insertAll(0, recs);
       await _store.save(records);
       return recs.length;
