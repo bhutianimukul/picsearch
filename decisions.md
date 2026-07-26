@@ -426,3 +426,19 @@ clearable junk or not, with a short reason (`aiClearable`/`aiClearReason`) — s
 when a key is on, the "you can clear" list is AI-judged (safe defaults: never
 IDs/cards/passwords/receipts) instead of the hard-coded OTP+duplicate heuristic.
 One call does both grouping and cleanup, kept cheap.
+
+---
+
+## 17. Ship: a real signed release APK
+
+**The decision:** Generated a proper RSA release keystore and wired
+`android/app/build.gradle.kts` to sign release builds from a git-ignored
+`android/key.properties` (falls back to debug keys if it's absent, so the build
+never breaks for someone without the secret). The APK verifies under a real
+`CN=PicSearch` cert, not the shared Android debug key.
+
+**Disabled R8 minify for release.** ML Kit's R8 pass references optional
+recognizers (Chinese, Devanagari, …) we don't bundle, which fails the build.
+A sideloaded demo APK gains nothing from obfuscation, so minify is off (the
+upgrade path — add the generated keep rules — is noted in the gradle file). Cost:
+a fat ~89 MB APK (the on-device OCR models dominate anyway).
