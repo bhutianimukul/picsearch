@@ -149,13 +149,15 @@ class _CategoryScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(primary?.label ?? categoryLabel(category),
-                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 6),
-                          Text(primary?.masked ?? _snippet(r.ocrText),
+                          Text(recordTitle(r),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: dataStyle.copyWith(color: c.inkDim, fontSize: 14)),
+                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(primary?.masked ?? categoryLabel(category),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: dataStyle.copyWith(color: c.inkDim, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -172,10 +174,6 @@ class _CategoryScreen extends StatelessWidget {
     );
   }
 
-  String _snippet(String text) {
-    final t = text.trim().replaceAll(RegExp(r'\s+'), ' ');
-    return t.length <= 40 ? t : '${t.substring(0, 40)}…';
-  }
 }
 
 class _CleanupBanner extends StatelessWidget {

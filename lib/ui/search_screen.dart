@@ -211,12 +211,8 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           ),
           const SizedBox(height: 18),
-          for (var i = 0; i < _suggestions.length; i++)
-            _ThoughtBubble(
-              text: _suggestions[i],
-              alignRight: i.isOdd,
-              onTap: () => _setQuery(_suggestions[i]),
-            ),
+          for (final s in _suggestions)
+            _ThoughtBubble(text: s, onTap: () => _setQuery(s)),
         ],
       );
 
@@ -261,10 +257,12 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(categoryLabel(r.category),
+                          Text(recordTitle(r),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
-                          Text(primary?.masked ?? _snippet(r.ocrText),
+                          Text(primary?.masked ?? categoryLabel(r.category),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: dataStyle.copyWith(color: c.inkDim, fontSize: 13)),
@@ -280,47 +278,58 @@ class _SearchScreenState extends State<SearchScreen> {
         },
       );
 
-  String _snippet(String text) {
-    final t = text.trim().replaceAll(RegExp(r'\s+'), ' ');
-    return t.length <= 44 ? t : '${t.substring(0, 44)}…';
-  }
 }
 
-/// A suggestion styled as an AI "thought bubble" — asymmetric tail, accent tint,
-/// alternating side, sparkle glyph.
+/// A suggestion styled as an AI chat bubble — soft accent gradient, a small
+/// tail on the bottom-left, sparkle glyph. Left-aligned so they read as a tidy
+/// stream rather than scattered chips.
 class _ThoughtBubble extends StatelessWidget {
-  const _ThoughtBubble({required this.text, required this.alignRight, required this.onTap});
+  const _ThoughtBubble({required this.text, required this.onTap});
   final String text;
-  final bool alignRight;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = context.pic;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Align(
-        alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
+        alignment: Alignment.centerLeft,
         child: GestureDetector(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
             decoration: BoxDecoration(
-              color: Color.alphaBlend(c.accent.withValues(alpha: 0.10), c.surface),
-              border: Border.all(color: c.accent.withValues(alpha: 0.35)),
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(alignRight ? 18 : 4),
-                bottomRight: Radius.circular(alignRight ? 4 : 18),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.alphaBlend(c.accent.withValues(alpha: 0.18), c.surface),
+                  c.surface,
+                ],
               ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                bottomLeft: Radius.circular(6),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: c.glow.withValues(alpha: 0.13),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.auto_awesome, size: 15, color: c.accent),
-                const SizedBox(width: 9),
-                Text(text, style: TextStyle(color: c.ink, fontSize: 14)),
+                const SizedBox(width: 10),
+                Text(text,
+                    style: TextStyle(
+                        color: c.ink, fontSize: 14.5, fontWeight: FontWeight.w500)),
               ],
             ),
           ),

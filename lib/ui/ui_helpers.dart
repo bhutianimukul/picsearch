@@ -34,6 +34,16 @@ String categoryLabel(Category c) {
   }
 }
 
+/// A human title for a record row: the field label if we extracted one, else a
+/// short lead from the OCR text (so a receipt shows "CAFE COFFEE DAY…", not the
+/// redundant category name).
+String recordTitle(ScreenshotRecord r) {
+  if (r.fields.isNotEmpty) return r.fields.first.label;
+  final t = r.ocrText.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (t.isEmpty) return categoryLabel(r.category);
+  return t.length <= 30 ? t : '${t.substring(0, 30)}…';
+}
+
 /// A distinct, muted hue per category — used to tint the type icons so the
 /// Vault/search read lively at a glance, while cards/surfaces stay monochrome.
 Color categoryColor(Category c) {

@@ -1,42 +1,47 @@
 import 'models.dart';
 
-/// On-device search over analysed screenshots. A record matches when *every*
-/// query token appears in its searchable blob (category + field labels/values +
-/// OCR text). Records whose structured fields match rank above those matching
-/// only loose OCR text — a verified card beats an incidental mention.
+// Filler words dropped from queries so natural phrasing works
+// ("give me my hdfc card" → [hdfc, card]). Meaningful terms like card/wifi/pan
+// are intentionally NOT here.
+const _stopWords = <String>{
+  'a', 'an', 'the', 'my', 'me', 'i', 'give', 'show', 'find', 'get', 'is', 'of',
+  'for', 'to', 'in', 'on', 'please', 'want', 'need', 'whats', 'what', 'where',
+  'wheres', 'that', 'this', 'can', 'you', 'and', 'with',
+};
+
+/// On-device search. Drops filler words, then ranks records by how many query
+/// terms they contain — matches in *structured fields* score higher than loose
+/// OCR text. OR-with-ranking (not strict AND) so partial / natural queries work.
 List<ScreenshotRecord> searchRecords(
     List<ScreenshotRecord> records, String query) {
   final tokens = query
       .toLowerCase()
-      .split(RegExp(r'\s+'))
-      .where((t) => t.isNotEmpty)
+      .split(RegExp(r'[^a-z0-9@]+'))
+      .where((t) => t.length > 1 && !_stopWords.contains(t))
       .toList();
   if (tokens.isEmpty) return const [];
 
-  final matched = <(ScreenshotRecord, int)>[];
+  final scored = <(ScreenshotRecord, int)>[];
   for (final r in records) {
     final blob = _blob(r);
-    if (!tokens.every(blob.contains)) continue;
-
+    final fieldBlob =
+        r.fields.map((f) => '${f.label} ${f.value}').join(' ').toLowerCase();
     var score = 0;
-    for (final f in r.analysis.fields) {
-      final fieldBlob = '${f.label} ${f.value}'.toLowerCase();
-      for (final t in tokens) {
-        if (fieldBlob.contains(t)) score++;
-      }
+    for (final t in tokens) {
+      if (blob.contains(t)) score += 1;
+      if (fieldBlob.contains(t)) score += 2;
     }
-    matched.add((r, score));
+    if (score > 0) scored.add((r, score));
   }
-
-  matched.sort((a, b) => b.$2.compareTo(a.$2));
-  return matched.map((m) => m.$1).toList();
+  scored.sort((a, b) => b.$2.compareTo(a.$2));
+  return scored.map((e) => e.$1).toList();
 }
 
 String _blob(ScreenshotRecord r) {
   final sb = StringBuffer()
     ..write(r.category.name)
     ..write(' ');
-  for (final f in r.analysis.fields) {
+  for (final f in r.fields) {
     sb
       ..write(f.label)
       ..write(' ')

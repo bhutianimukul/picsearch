@@ -10,26 +10,26 @@ void main() {
   final records = [
     _rec('a.png', 'HDFC Bank credit card 4111 1111 1111 1111'),
     _rec('b.png', 'WiFi network Airbnb-Goa password hunter2'),
-    _rec('c.png', 'ICICI account IFSC HDFC0001234'),
+    _rec('c.png', 'CAFE COFFEE DAY Invoice Grand Total Rs 450'),
   ];
 
-  test('finds the HDFC *card*, not the HDFC IFSC row', () {
-    final r = searchRecords(records, 'hdfc card');
-    expect(r.first.imagePath, 'a.png');
-    expect(r.any((x) => x.imagePath == 'c.png'), isFalse);
+  test('ranks the HDFC card first for "hdfc card"', () {
+    expect(searchRecords(records, 'hdfc card').first.imagePath, 'a.png');
   });
 
-  test('matches loose OCR text (airbnb wifi)', () {
-    final r = searchRecords(records, 'airbnb wifi');
-    expect(r.map((x) => x.imagePath), contains('b.png'));
+  test('natural-language query works — filler words are stripped', () {
+    // "give me my cafe bill" -> [cafe, bill]; "cafe" hits the receipt.
+    final r = searchRecords(records, 'give me my cafe bill');
+    expect(r.map((x) => x.imagePath), contains('c.png'));
   });
 
-  test('all tokens must match (AND, not OR)', () {
-    // "card" matches a; "wifi" matches b; together → nothing.
-    expect(searchRecords(records, 'card wifi'), isEmpty);
+  test('matches any meaningful token, ranked (not strict AND)', () {
+    final r = searchRecords(records, 'card wifi');
+    expect(r.map((x) => x.imagePath), containsAll(['a.png', 'b.png']));
   });
 
-  test('blank query returns nothing', () {
+  test('blank or stopword-only query returns nothing', () {
     expect(searchRecords(records, '   '), isEmpty);
+    expect(searchRecords(records, 'give me the'), isEmpty);
   });
 }
