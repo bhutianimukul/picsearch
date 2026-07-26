@@ -23,7 +23,7 @@ class _RootShellState extends State<RootShell> {
     final n = await state.scanFromGallery();
     if (!mounted) return;
     if (n > 0) {
-      setState(() => _index = 1); // jump to Vault to show results
+      setState(() => _index = 1);
       messenger.showSnackBar(SnackBar(content: Text('Sorted $n screenshot${n == 1 ? '' : 's'}')));
     }
   }
@@ -59,25 +59,26 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.line)),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.line)),
       ),
       padding: EdgeInsets.only(top: 6, bottom: MediaQuery.of(context).padding.bottom + 6),
       child: Row(
         children: [
-          _item(Icons.search, 'Home', index == 0, onHome),
-          _item(Icons.lock_outline, 'Vault', index == 1, onVault),
-          _item(Icons.add_a_photo_outlined, 'Scan', false, onScan),
-          _item(Icons.settings_outlined, 'Settings', index == 2, onSettings),
+          _item(c, Icons.search, 'Home', index == 0, onHome),
+          _item(c, Icons.lock_outline, 'Vault', index == 1, onVault),
+          _item(c, Icons.add_a_photo_outlined, 'Scan', false, onScan),
+          _item(c, Icons.settings_outlined, 'Settings', index == 2, onSettings),
         ],
       ),
     );
   }
 
-  Widget _item(IconData icon, String label, bool active, VoidCallback onTap) {
-    final color = active ? AppColors.accent : AppColors.inkFaint;
+  Widget _item(PicColors c, IconData icon, String label, bool active, VoidCallback onTap) {
+    final color = active ? c.accent : c.inkFaint;
     return Expanded(
       child: InkWell(
         onTap: onTap,

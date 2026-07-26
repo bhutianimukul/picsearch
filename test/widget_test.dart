@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:picsearch/src/models.dart';
 import 'package:picsearch/src/validators.dart';
+import 'package:picsearch/theme.dart';
 import 'package:picsearch/ui/ui_helpers.dart';
+
+Widget _wrap(Widget child) => MaterialApp(
+      theme: buildTheme(Brightness.dark),
+      home: Scaffold(body: child),
+    );
 
 void main() {
   testWidgets('MaskedField hides a sensitive value and reveals it on tap',
@@ -14,9 +20,7 @@ void main() {
       masked: '••••••••••••6467',
       sensitive: true,
     );
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: MaskedField(field: field)),
-    ));
+    await tester.pumpWidget(_wrap(const MaskedField(field: field)));
 
     expect(find.text('••••••••••••6467'), findsOneWidget);
     expect(find.text('4539148803436467'), findsNothing);
@@ -35,9 +39,7 @@ void main() {
       masked: 'HDFC0001234',
       sensitive: false,
     );
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: MaskedField(field: field)),
-    ));
+    await tester.pumpWidget(_wrap(const MaskedField(field: field)));
     expect(find.byIcon(Icons.lock_outline), findsNothing);
     expect(find.text('HDFC0001234'), findsOneWidget);
   });

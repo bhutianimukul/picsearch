@@ -13,6 +13,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     final state = AppScope.of(context);
     final count = state.records.length;
     return Stack(
@@ -26,9 +27,9 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text('Good evening', style: TextStyle(color: AppColors.inkDim, fontSize: 13)),
+                    Text('Good evening', style: TextStyle(color: c.inkDim, fontSize: 13)),
                     const Spacer(),
-                    const Icon(Icons.lock_outline, color: AppColors.inkDim, size: 20),
+                    Icon(Icons.lock_outline, color: c.inkDim, size: 20),
                   ],
                 ),
                 Expanded(
@@ -45,7 +46,7 @@ class HomeScreen extends StatelessWidget {
                         count == 0
                             ? 'Tap Scan to read your screenshots'
                             : '$count screenshot${count == 1 ? '' : 's'}, read & ready',
-                        style: const TextStyle(color: AppColors.inkDim, fontSize: 13),
+                        style: TextStyle(color: c.inkDim, fontSize: 13),
                       ),
                     ],
                   ),
@@ -53,10 +54,7 @@ class HomeScreen extends StatelessWidget {
                 Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 8,
-                  children: const [
-                    _Ghost('My HDFC card'),
-                    _Ghost('Airbnb wifi'),
-                  ],
+                  children: const [_Ghost('My HDFC card'), _Ghost('Airbnb wifi')],
                 ),
                 const SizedBox(height: 12),
                 const _SearchDock(),
@@ -73,45 +71,49 @@ class _Ghost extends StatelessWidget {
   const _Ghost(this.text);
   final String text;
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Text(text, style: const TextStyle(fontSize: 12, color: AppColors.inkDim)),
-      );
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.line),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 12, color: c.inkDim)),
+    );
+  }
 }
 
 class _SearchDock extends StatelessWidget {
   const _SearchDock();
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line),
+        border: Border.all(color: c.line),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, color: AppColors.inkFaint, size: 20),
+          Icon(Icons.search, color: c.inkFaint, size: 20),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text('Ask, or hold to speak…',
-                style: TextStyle(color: AppColors.inkFaint, fontSize: 15)),
+                style: TextStyle(color: c.inkFaint, fontSize: 15)),
           ),
           Container(
             width: 38,
             height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.accent.withValues(alpha: 0.18),
-              boxShadow: [BoxShadow(color: AppColors.glow.withValues(alpha: 0.45), blurRadius: 20)],
+              color: c.accent.withValues(alpha: 0.18),
+              boxShadow: [BoxShadow(color: c.glow.withValues(alpha: 0.45), blurRadius: 20)],
             ),
-            child: const Icon(Icons.mic_none, color: AppColors.accent, size: 18),
+            child: Icon(Icons.mic_none, color: c.accent, size: 18),
           ),
         ],
       ),
@@ -138,6 +140,7 @@ class _OrbitMarkState extends State<_OrbitMark> with SingleTickerProviderStateMi
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     return SizedBox(
       width: 200,
       height: 200,
@@ -154,7 +157,7 @@ class _OrbitMarkState extends State<_OrbitMark> with SingleTickerProviderStateMi
                     math.cos(base + i * 2 * math.pi / 3) * 84,
                     math.sin(base + i * 2 * math.pi / 3) * 84,
                   ),
-                  child: _orbitCard(),
+                  child: _orbitCard(c),
                 ),
               child!,
             ],
@@ -164,24 +167,24 @@ class _OrbitMarkState extends State<_OrbitMark> with SingleTickerProviderStateMi
           width: 92,
           height: 92,
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: c.surface,
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: AppColors.accent.withValues(alpha: 0.26)),
-            boxShadow: [BoxShadow(color: AppColors.glow.withValues(alpha: 0.42), blurRadius: 46)],
+            border: Border.all(color: c.accent.withValues(alpha: 0.26)),
+            boxShadow: [BoxShadow(color: c.glow.withValues(alpha: 0.42), blurRadius: 46)],
           ),
-          child: const Icon(Icons.lock_outline, color: AppColors.accent, size: 38),
+          child: Icon(Icons.lock_outline, color: c.accent, size: 38),
         ),
       ),
     );
   }
 
-  Widget _orbitCard() => Container(
+  Widget _orbitCard(PicColors c) => Container(
         width: 38,
         height: 27,
         decoration: BoxDecoration(
-          color: AppColors.surface2,
+          color: c.surface2,
           borderRadius: BorderRadius.circular(7),
-          border: Border.all(color: AppColors.line),
+          border: Border.all(color: c.line),
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, offset: Offset(0, 6))],
         ),
       );

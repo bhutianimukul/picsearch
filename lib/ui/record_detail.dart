@@ -12,23 +12,24 @@ class RecordDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     return Scaffold(
-      appBar: AppBar(title: Text(categoryLabel(record.category)), backgroundColor: AppColors.ground),
+      appBar: AppBar(title: Text(categoryLabel(record.category))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _Preview(),
+          const _Preview(),
           if (record.fields.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
               child: Text('No structured fields — this one is filed by its text.',
-                  style: TextStyle(color: AppColors.inkDim)),
+                  style: TextStyle(color: c.inkDim)),
             )
           else
             ...record.fields.map((f) => Column(
                   children: [
                     MaskedField(field: f),
-                    const Divider(height: 1, color: AppColors.line),
+                    Divider(height: 1, color: c.line),
                   ],
                 )),
           if (record.fields.isNotEmpty)
@@ -36,14 +37,14 @@ class RecordDetail extends StatelessWidget {
               margin: const EdgeInsets.only(top: 14),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(11),
-                border: Border.all(color: AppColors.line),
+                border: Border.all(color: c.line),
               ),
-              child: const Row(children: [
-                Icon(Icons.verified_outlined, size: 16, color: AppColors.accent),
-                SizedBox(width: 8),
-                Expanded(child: Text('Verified & read on-device', style: TextStyle(color: AppColors.inkDim, fontSize: 12.5))),
+              child: Row(children: [
+                Icon(Icons.verified_outlined, size: 16, color: c.accent),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Verified & read on-device', style: TextStyle(color: c.inkDim, fontSize: 12.5))),
               ]),
             ),
           const SizedBox(height: 16),
@@ -52,15 +53,15 @@ class RecordDetail extends StatelessWidget {
             icon: const Icon(Icons.delete_outline),
             label: const Text('Move to Vault & delete original'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.ink,
-              side: const BorderSide(color: AppColors.line),
+              foregroundColor: c.ink,
+              side: BorderSide(color: c.line),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
           const SizedBox(height: 8),
-          const Text('The original screenshot stays in your gallery until you delete it.',
+          Text('The original screenshot stays in your gallery until you delete it.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, color: AppColors.inkFaint)),
+              style: TextStyle(fontSize: 11.5, color: c.inkFaint)),
         ],
       ),
     );
@@ -68,23 +69,27 @@ class RecordDetail extends StatelessWidget {
 }
 
 class _Preview extends StatelessWidget {
+  const _Preview();
   @override
-  Widget build(BuildContext context) => Container(
-        height: 148,
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.line),
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return Container(
+      height: 148,
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.line),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, color: c.inkDim, size: 20),
+            const SizedBox(height: 7),
+            Text('Original hidden', style: TextStyle(color: c.inkDim, fontSize: 12)),
+          ],
         ),
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.lock_outline, color: AppColors.inkDim, size: 20),
-              SizedBox(height: 7),
-              Text('Original hidden', style: TextStyle(color: AppColors.inkDim, fontSize: 12)),
-            ],
-          ),
-        ),
-      );
+      ),
+    );
+  }
 }

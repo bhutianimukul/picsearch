@@ -13,16 +13,15 @@ class VaultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     final state = AppScope.of(context);
     final counts = state.categoryCounts;
-    final cats = counts.keys.toList()
-      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final cats = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vault'),
-        backgroundColor: AppColors.ground,
-        actions: const [Padding(padding: EdgeInsets.only(right: 16), child: Icon(Icons.lock_outline, color: AppColors.inkDim))],
+        actions: [Padding(padding: const EdgeInsets.only(right: 16), child: Icon(Icons.lock_outline, color: c.inkDim))],
       ),
       body: state.records.isEmpty
           ? const _Empty()
@@ -30,10 +29,7 @@ class VaultScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               itemCount: cats.length,
               separatorBuilder: (_, _) => const SizedBox(height: 9),
-              itemBuilder: (context, i) {
-                final c = cats[i];
-                return _CategoryRow(category: c, count: counts[c]!);
-              },
+              itemBuilder: (context, i) => _CategoryRow(category: cats[i], count: counts[cats[i]]!),
             ),
     );
   }
@@ -42,18 +38,21 @@ class VaultScreen extends StatelessWidget {
 class _Empty extends StatelessWidget {
   const _Empty();
   @override
-  Widget build(BuildContext context) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.add_a_photo_outlined, size: 40, color: AppColors.inkFaint),
-            SizedBox(height: 14),
-            Text('Nothing here yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            SizedBox(height: 6),
-            Text('Tap Scan to read your screenshots', style: TextStyle(color: AppColors.inkDim)),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.add_a_photo_outlined, size: 40, color: c.inkFaint),
+          const SizedBox(height: 14),
+          const Text('Nothing here yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          Text('Tap Scan to read your screenshots', style: TextStyle(color: c.inkDim)),
+        ],
+      ),
+    );
+  }
 }
 
 class _CategoryRow extends StatelessWidget {
@@ -63,8 +62,9 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     return Material(
-      color: AppColors.surface,
+      color: c.surface,
       borderRadius: BorderRadius.circular(13),
       child: InkWell(
         borderRadius: BorderRadius.circular(13),
@@ -75,22 +75,22 @@ class _CategoryRow extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: AppColors.line),
+            border: Border.all(color: c.line),
           ),
           child: Row(
             children: [
               Container(
                 width: 34,
                 height: 34,
-                decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(9)),
-                child: Icon(categoryIcon(category), size: 18, color: AppColors.inkDim),
+                decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(9)),
+                child: Icon(categoryIcon(category), size: 18, color: c.inkDim),
               ),
               const SizedBox(width: 13),
               Text(categoryLabel(category), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const Spacer(),
-              Text('$count', style: dataStyle.copyWith(color: AppColors.inkDim, fontSize: 13)),
+              Text('$count', style: dataStyle.copyWith(color: c.inkDim, fontSize: 13)),
               const SizedBox(width: 6),
-              const Icon(Icons.chevron_right, color: AppColors.inkFaint, size: 20),
+              Icon(Icons.chevron_right, color: c.inkFaint, size: 20),
             ],
           ),
         ),
@@ -105,9 +105,10 @@ class _CategoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     final records = AppScope.of(context).byCategory(category);
     return Scaffold(
-      appBar: AppBar(title: Text(categoryLabel(category)), backgroundColor: AppColors.ground),
+      appBar: AppBar(title: Text(categoryLabel(category))),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: records.length,
@@ -116,7 +117,7 @@ class _CategoryScreen extends StatelessWidget {
           final r = records[i];
           final primary = r.fields.isNotEmpty ? r.fields.first : null;
           return Material(
-            color: AppColors.surface,
+            color: c.surface,
             borderRadius: BorderRadius.circular(13),
             child: InkWell(
               borderRadius: BorderRadius.circular(13),
@@ -127,7 +128,7 @@ class _CategoryScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(13),
-                  border: Border.all(color: AppColors.line),
+                  border: Border.all(color: c.line),
                 ),
                 child: Row(
                   children: [
@@ -141,14 +142,13 @@ class _CategoryScreen extends StatelessWidget {
                           Text(primary?.masked ?? _snippet(r.ocrText),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: dataStyle.copyWith(color: AppColors.inkDim, fontSize: 14)),
+                              style: dataStyle.copyWith(color: c.inkDim, fontSize: 14)),
                         ],
                       ),
                     ),
-                    if (r.fields.isNotEmpty)
-                      const Icon(Icons.verified_outlined, size: 16, color: AppColors.accent),
+                    if (r.fields.isNotEmpty) Icon(Icons.verified_outlined, size: 16, color: c.accent),
                     const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: AppColors.inkFaint, size: 20),
+                    Icon(Icons.chevron_right, color: c.inkFaint, size: 20),
                   ],
                 ),
               ),

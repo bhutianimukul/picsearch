@@ -86,26 +86,24 @@ class _MaskedFieldState extends State<MaskedField> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     final f = widget.field;
     final showFull = _revealed || !f.sensitive;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(f.label.toUpperCase(), style: labelStyle),
+                Text(f.label.toUpperCase(), style: labelStyle.copyWith(color: c.inkFaint)),
                 const SizedBox(height: 5),
                 Text(
                   showFull ? f.value : f.masked,
                   style: dataStyle.copyWith(
                     fontSize: 16,
-                    color: (showFull && f.sensitive)
-                        ? AppColors.accent
-                        : AppColors.ink,
+                    color: (showFull && f.sensitive) ? c.accent : c.ink,
                   ),
                 ),
               ],
@@ -114,13 +112,13 @@ class _MaskedFieldState extends State<MaskedField> {
           if (f.sensitive)
             IconButton(
               icon: Icon(_revealed ? Icons.lock_open : Icons.lock_outline),
-              color: _revealed ? AppColors.accent : AppColors.inkDim,
+              color: _revealed ? c.accent : c.inkDim,
               tooltip: _revealed ? 'Hide' : 'Reveal',
               onPressed: () => setState(() => _revealed = !_revealed),
             ),
           IconButton(
             icon: const Icon(Icons.copy_rounded),
-            color: AppColors.inkDim,
+            color: c.inkDim,
             tooltip: 'Copy',
             onPressed: _copy,
           ),
@@ -130,15 +128,16 @@ class _MaskedFieldState extends State<MaskedField> {
   }
 }
 
-/// Soft ambient glow used behind the home content (the calm "aurora").
+/// Soft ambient glow behind the home content (the calm "aurora").
 class AuroraBackground extends StatelessWidget {
   const AuroraBackground({super.key});
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     return IgnorePointer(
       child: Stack(children: [
-        _blob(const Alignment(-1.1, -0.7), AppColors.glow),
-        _blob(const Alignment(1.2, 0.9), AppColors.accent),
+        _blob(const Alignment(-1.1, -0.7), c.glow),
+        _blob(const Alignment(1.2, 0.9), c.accent),
       ]),
     );
   }
@@ -151,7 +150,7 @@ class AuroraBackground extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
-              colors: [color.withValues(alpha: 0.28), Colors.transparent],
+              colors: [color.withValues(alpha: 0.26), Colors.transparent],
             ),
           ),
         ),
