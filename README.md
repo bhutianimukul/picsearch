@@ -220,12 +220,25 @@ valid Aadhaar numbers (see [`decisions.md`](decisions.md) §16).
 
 ## How it works (architecture)
 
-```
- screenshot ─▶ on-device OCR ─▶ detect + VERIFY ─▶ classify ─▶ encrypted vault ─▶ search
-   (pixels)     (ML Kit)        Luhn / Verhoeff     category    AES-256 (Keystore)  keyword + voice
-                                PAN / IFSC / UPI    + fields         │
-                                                                     ▼  (optional, masked text only)
-                                                          Gemini ─▶ smart folders + cleanup + answers
+**Ingest / "indexing" — one pass per screenshot, at scan time.** The image is
+turned into a text record once; pixels are never stored in or fed to search again.
+
+```mermaid
+flowchart TD
+    A["📸 Screenshot (pixels)"] --> B["ML Kit Text Recognition<br/>OCR · on-device"]
+    A --> C["ML Kit Barcode Scanning<br/>QR decode · on-device"]
+    B --> D["Combined text"]
+    C --> D
+    D --> E["analyzeText() · pure Dart"]
+    E --> F{"detect + VERIFY<br/>Luhn · Verhoeff · PAN · IFSC · UPI"}
+    F -->|"passes checksum / format"| G["Structured fields<br/>+ mask sensitive values"]
+    F -->|"no match"| H["category = Other"]
+    E --> I["classify → category"]
+    G --> J["ScreenshotRecord<br/>ocrText · fields · category"]
+    I --> J
+    J --> K["AES-256 encrypt<br/>key in Android Keystore"]
+    K --> L[("🔒 Encrypted vault file — the index")]
+    J -. "if an AI engine is on" .-> M["analyzeRecords()<br/>→ aiGroup + clearable (writes back)"]
 ```
 
 Layered so the hard logic is provable without a device:
@@ -239,6 +252,41 @@ Layered so the hard logic is provable without a device:
 The whole “messy → structured” transform — including the Gemini prompt building,
 redaction, and response parsing — is pure and synchronous, so it runs under
 `dart test` in milliseconds with no OCR, UI, or network.
+
+### Query → two search paths
+
+A query always runs the on-device keyword ranker; with an AI engine on, it can
+*also* take the RAG path. **Only redacted text ever leaves the device — never
+pixels, never full numbers.**
+
+```mermaid
+flowchart TD
+    Q["🔎 Query · typed or voice"] --> T["tokenize · drop stop-words"]
+    T --> K["Keyword ranker — always on<br/>linear scan of every record<br/>field hit +3 · OCR-body hit +1"]
+    K --> R["Ranked results → list UI"]
+    T -. "if an AI engine is on" .-> C1["Retrieve · records (≤ 50)"]
+    C1 --> C2["Redact · 6+ digit runs → ••••last4"]
+    C2 --> C3["Augment · numbered masked context"]
+    C3 --> C4["Generate · pick engine"]
+    C4 --> C5["Grounded answer + item citation"]
+```
+
+The **Generate** step is engine-agnostic — same redacted prompt either way:
+
+```mermaid
+flowchart LR
+    C4["Generate<br/>(masked text only)"] --> E{"aiMode"}
+    E -->|"cloud + key"| GEM["Gemini · gemini-flash-latest<br/>☁ cloud"]
+    E -->|"on-device"| GMA["Gemma · MediaPipe<br/>📱 no key · no network"]
+    GEM --> OUT["Answer · smart folders · cleanup"]
+    GMA --> OUT
+```
+
+> **Prompting:** zero-shot, grounded — a role + "answer **only** from this context,
+> never invent a number" guardrail + "cite the item", with the redacted vault
+> injected as a numbered list. Grouping/cleanup uses one JSON-mode call
+> (`responseMimeType: application/json`, leniently parsed for small local models).
+> No few-shot, no chain-of-thought.
 
 ---
 
