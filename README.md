@@ -220,25 +220,11 @@ valid Aadhaar numbers (see [`decisions.md`](decisions.md) §16).
 
 ## How it works (architecture)
 
-**Ingest / "indexing" — one pass per screenshot, at scan time.** The image is
-turned into a text record once; pixels are never stored in or fed to search again.
+**Ingest** — one pass per screenshot; the image becomes a text record and is never searched again:
 
 ```mermaid
-flowchart TD
-    A["📸 Screenshot (pixels)"] --> B["ML Kit Text Recognition<br/>OCR · on-device"]
-    A --> C["ML Kit Barcode Scanning<br/>QR decode · on-device"]
-    B --> D["Combined text"]
-    C --> D
-    D --> E["analyzeText() · pure Dart"]
-    E --> F{"detect + VERIFY<br/>Luhn · Verhoeff · PAN · IFSC · UPI"}
-    F -->|"passes checksum / format"| G["Structured fields<br/>+ mask sensitive values"]
-    F -->|"no match"| H["category = Other"]
-    E --> I["classify → category"]
-    G --> J["ScreenshotRecord<br/>ocrText · fields · category"]
-    I --> J
-    J --> K["AES-256 encrypt<br/>key in Android Keystore"]
-    K --> L[("🔒 Encrypted vault file — the index")]
-    J -. "if an AI engine is on" .-> M["analyzeRecords()<br/>→ aiGroup + clearable (writes back)"]
+flowchart LR
+    A["📸 Screenshot"] --> B["On-device OCR + QR decode<br/>(ML Kit)"] --> C["analyzeText()<br/>verify · mask · classify"] --> D["ScreenshotRecord"] --> E[("🔒 Encrypted vault<br/>AES-256 · Keystore")]
 ```
 
 Layered so the hard logic is provable without a device:
@@ -253,40 +239,20 @@ The whole “messy → structured” transform — including the Gemini prompt b
 redaction, and response parsing — is pure and synchronous, so it runs under
 `dart test` in milliseconds with no OCR, UI, or network.
 
-### Query → two search paths
+### Query → two paths
 
-A query always runs the on-device keyword ranker; with an AI engine on, it can
-*also* take the RAG path. **Only redacted text ever leaves the device — never
-pixels, never full numbers.**
-
-```mermaid
-flowchart TD
-    Q["🔎 Query · typed or voice"] --> T["tokenize · drop stop-words"]
-    T --> K["Keyword ranker — always on<br/>linear scan of every record<br/>field hit +3 · OCR-body hit +1"]
-    K --> R["Ranked results → list UI"]
-    T -. "if an AI engine is on" .-> C1["Retrieve · records (≤ 50)"]
-    C1 --> C2["Redact · 6+ digit runs → ••••last4"]
-    C2 --> C3["Augment · numbered masked context"]
-    C3 --> C4["Generate · pick engine"]
-    C4 --> C5["Grounded answer + item citation"]
-```
-
-The **Generate** step is engine-agnostic — same redacted prompt either way:
+Keyword search always runs on-device; with an AI engine on, the query can *also*
+take the RAG path — **only redacted text leaves the device, never pixels:**
 
 ```mermaid
 flowchart LR
-    C4["Generate<br/>(masked text only)"] --> E{"aiMode"}
-    E -->|"cloud + key"| GEM["Gemini · gemini-flash-latest<br/>☁ cloud"]
-    E -->|"on-device"| GMA["Gemma · MediaPipe<br/>📱 no key · no network"]
-    GEM --> OUT["Answer · smart folders · cleanup"]
-    GMA --> OUT
+    Q["🔎 Query"] --> K["Keyword ranker (always)<br/>field +3 · body +1"] --> R["Ranked list"]
+    Q -. "AI on" .-> G["RAG · retrieve → redact →<br/>masked context → generate<br/>Gemini ☁ / Gemma 📱"]
+    G --> A2["Grounded answer + cite"]
 ```
 
-> **Prompting:** zero-shot, grounded — a role + "answer **only** from this context,
-> never invent a number" guardrail + "cite the item", with the redacted vault
-> injected as a numbered list. Grouping/cleanup uses one JSON-mode call
-> (`responseMimeType: application/json`, leniently parsed for small local models).
-> No few-shot, no chain-of-thought.
+Zero-shot, grounded prompting ("answer only from this context, never invent a
+number, cite the item"); grouping/cleanup uses one JSON-mode call.
 
 ---
 
@@ -417,6 +383,17 @@ ever outgrows the context window.
 
 The AI is a **pluggable engine** (`lib/src/ai_engine.dart`) — pick **Cloud (Gemini)**
 or **On-device (Gemma)** in Settings; the rest of the app is identical either way.
+
+**Model & params**
+
+| Role | Model / ID | Key params |
+|---|---|---|
+| OCR | ML Kit Text Recognition v2 | `TextRecognitionScript.latin`, bundled, on-device |
+| QR / barcode | ML Kit Barcode Scanning | all formats, on-device |
+| Cloud LLM | `gemini-flash-latest` | `v1beta …:generateContent`; default sampling; structured pass sets `responseMimeType: application/json` |
+| On-device LLM | Gemma 3 1B-IT, int4 `.task` | `ModelType.gemmaIt`, `maxTokens: 2048`, MediaPipe (`flutter_gemma`), ~550 MB |
+| RAG context | — | ≤ **50** records · per-record snippet ≤ **120** chars · redact digit-runs ≥ **6** → last-4 |
+| Keyword rank | — | field hit **+3** · OCR-body hit **+1** · min token length 2 · stop-word filter |
 
 <p align="center">
   <img src="docs/screenshots/settings-ondevice.png" width="300" alt="On-device model settings — download Gemma, no key">
