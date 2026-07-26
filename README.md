@@ -369,6 +369,17 @@ ever outgrows the context window.
 The AI is a **pluggable engine** (`lib/src/ai_engine.dart`) — pick **Cloud (Gemini)**
 or **On-device (Gemma)** in Settings; the rest of the app is identical either way.
 
+<p align="center">
+  <img src="docs/screenshots/settings-ondevice.png" width="300" alt="On-device model settings — download Gemma, no key">
+</p>
+
+**Turning on on-device AI:** Settings → *On-device model* → **Open the model page**
+(accept Gemma's licence, copy a free Hugging Face read token) → paste the token →
+**Download Gemma 3 1B**. When it lands, the card shows **On-device model ready** and
+you can flip **Cloud ↔ On-device**; from then on search / smart folders / cleanup
+run locally with no key and no network. *(Inference needs a real phone; the model
+must be a MediaPipe `.task`.)*
+
 > **No cloud vision LLM is used.** The *only* model that sees your pixels is the
 > on-device OCR; the text LLM receives redacted **text** only — never images — and
 > QR/UPI is parsed from that OCR text, not a separate scanner. (If you want vision
