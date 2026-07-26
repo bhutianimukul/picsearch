@@ -384,16 +384,21 @@ ever outgrows the context window.
 The AI is a **pluggable engine** (`lib/src/ai_engine.dart`) — pick **Cloud (Gemini)**
 or **On-device (Gemma)** in Settings; the rest of the app is identical either way.
 
-**Model & params**
+**Model details & params**
 
-| Role | Model / ID | Key params |
-|---|---|---|
-| OCR | ML Kit Text Recognition v2 | `TextRecognitionScript.latin`, bundled, on-device |
-| QR / barcode | ML Kit Barcode Scanning | all formats, on-device |
-| Cloud LLM | `gemini-flash-latest` | `v1beta …:generateContent`; default sampling; structured pass sets `responseMimeType: application/json` |
-| On-device LLM | Gemma 3 1B-IT, int4 `.task` | `ModelType.gemmaIt`, `maxTokens: 2048`, MediaPipe (`flutter_gemma`), ~550 MB |
-| RAG context | — | ≤ **50** records · per-record snippet ≤ **120** chars · redact digit-runs ≥ **6** → last-4 |
-| Keyword rank | — | field hit **+3** · OCR-body hit **+1** · min token length 2 · stop-word filter |
+| Role | Model | Params / size | Context | Sampling / config |
+|---|---|---|---|---|
+| OCR | ML Kit Text Recognition v2 | bundled, ~few MB *(count not published by Google)* | — | `script: latin`, 100% on-device |
+| QR / barcode | ML Kit Barcode Scanning | bundled | — | all formats, on-device |
+| Voice | Android `SpeechRecognizer` (OS engine, via `speech_to_text`) | n/a — not our model | — | device default locale |
+| Cloud LLM | **Gemini `gemini-flash-latest`** → resolves to *gemini-3.x-flash* | *count not published*; ~1M-token window | we send ≤50 records | `v1beta:generateContent`, **API-default sampling** (no temp/top-p set); structured pass → `responseMimeType: application/json` |
+| On-device LLM | **Gemma 3 1B-IT** (`.task`, MediaPipe) | **≈1 B params · int4 quant · ~550 MB** | `maxTokens: 2048` | `ModelType.gemmaIt`, default output cap, CPU/GPU auto-backend |
+
+- **RAG:** context ≤ **50** records · per-record snippet ≤ **120** chars · redact digit-runs ≥ **6** → last-4 · zero-shot grounded prompt.
+- **Keyword rank:** field hit **+3** · OCR-body hit **+1** · min token length **2** · ~30-word stop-list.
+- **Deterministic extraction** (not a model — the "params" that gate a match): Luhn (13–19 digits) · Verhoeff (12-digit, lead 2–9) · PAN `[A-Z]{5}[0-9]{4}[A-Z]` · IFSC `[A-Z]{4}0[A-Z0-9]{6}` · UPI `upi://` decode + `name@bank` VPA.
+
+*Google doesn't publish parameter counts for Gemini or ML Kit; only Gemma's (~1 B) is public. No temperature/top-p is overridden — the cloud path uses the API defaults, the on-device path uses MediaPipe's.*
 
 <p align="center">
   <img src="docs/screenshots/settings-ondevice.png" width="300" alt="On-device model settings — download Gemma, no key">
