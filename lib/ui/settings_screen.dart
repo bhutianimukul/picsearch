@@ -15,11 +15,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _keyCtrl = TextEditingController();
+  final _hfTokenCtrl = TextEditingController();
   bool _saving = false;
 
   @override
   void dispose() {
     _keyCtrl.dispose();
+    _hfTokenCtrl.dispose();
     super.dispose();
   }
 
@@ -31,6 +33,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SnackBar(content: Text('Couldn’t open the browser')));
     }
   }
+
+  Future<void> _openModelPage() => launchUrl(
+      Uri.parse('https://huggingface.co/litert-community/Gemma3-1B-IT'),
+      mode: LaunchMode.externalApplication);
 
   @override
   Widget build(BuildContext context) {
@@ -187,10 +193,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      TextField(
+        controller: _hfTokenCtrl,
+        obscureText: true,
+        style: dataStyle.copyWith(fontSize: 13, color: c.ink),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'Hugging Face token (for the gated model)',
+          hintStyle: TextStyle(
+              color: c.inkFaint, fontFamily: 'monospace', fontSize: 12.5),
+          prefixIcon: Icon(Icons.key_outlined, color: c.inkFaint, size: 18),
+          filled: true,
+          fillColor: c.surface2,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: c.line),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: c.accent),
+          ),
+        ),
+      ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: _openModelPage,
+          icon: const Icon(Icons.open_in_new, size: 15),
+          label: const Text('Open the model page — accept the licence & get a token'),
+          style: TextButton.styleFrom(
+            foregroundColor: c.accent,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
       SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: () => state.downloadLocalModel(),
+          onPressed: () {
+            final t = _hfTokenCtrl.text.trim();
+            state.downloadLocalModel(hfToken: t.isEmpty ? null : t);
+          },
           icon: const Icon(Icons.download_outlined),
           label: const Text('Download Gemma 3 1B  (~550 MB)'),
           style: FilledButton.styleFrom(
@@ -199,6 +245,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             minimumSize: const Size.fromHeight(48),
           ),
         ),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        'Gemma is gated — open the page, accept the licence, and paste a free '
+        'read token above. (Inference then runs offline, on a real phone.)',
+        style: TextStyle(color: c.inkFaint, fontSize: 11.5, height: 1.4),
       ),
       if (state.modelError != null)
         Padding(

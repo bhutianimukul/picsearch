@@ -209,6 +209,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Activate a Gemma `.task`/`.bin` the user downloaded themselves (via the
+  /// browser) — sidesteps in-app auth for gated models.
+  Future<void> loadLocalModelFile(String path) async {
+    if (downloadingModel) return;
+    downloadingModel = true;
+    modelError = null;
+    notifyListeners();
+    try {
+      await LocalGemma.loadFile(path);
+      aiMode = AiMode.local;
+      notifyListeners();
+      if (records.isNotEmpty) unawaited(regroupWithAi());
+    } catch (e) {
+      modelError = 'Couldn’t load that file — is it a MediaPipe Gemma .task? ($e)';
+    } finally {
+      downloadingModel = false;
+      notifyListeners();
+    }
+  }
+
   Future<String> askAi(String query) {
     final e = engine;
     if (e == null) throw StateError('No AI engine ready');
