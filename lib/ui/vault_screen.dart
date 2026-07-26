@@ -82,8 +82,11 @@ class _CategoryRow extends StatelessWidget {
               Container(
                 width: 34,
                 height: 34,
-                decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(9)),
-                child: Icon(categoryIcon(category), size: 18, color: c.inkDim),
+                decoration: BoxDecoration(
+                  color: categoryColor(category).withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(categoryIcon(category), size: 18, color: categoryColor(category)),
               ),
               const SizedBox(width: 13),
               Text(categoryLabel(category), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),

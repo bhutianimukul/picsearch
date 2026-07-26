@@ -33,6 +33,37 @@ String categoryLabel(Category c) {
   }
 }
 
+/// A distinct, muted hue per category — used to tint the type icons so the
+/// Vault/search read lively at a glance, while cards/surfaces stay monochrome.
+Color categoryColor(Category c) {
+  switch (c) {
+    case Category.card:
+      return const Color(0xFF5B9BD5); // blue
+    case Category.aadhaar:
+      return const Color(0xFFE0A15E); // amber
+    case Category.pan:
+      return const Color(0xFFC98BE0); // violet
+    case Category.bank:
+      return const Color(0xFF5FB0A0); // teal
+    case Category.upiQr:
+      return const Color(0xFF7FBF6A); // green
+    case Category.credential:
+      return const Color(0xFFE08A8A); // coral
+    case Category.recipe:
+      return const Color(0xFF8FB96A); // olive
+    case Category.ticket:
+      return const Color(0xFFE08FB8); // pink
+    case Category.receipt:
+      return const Color(0xFFE0B85E); // gold
+    case Category.otp:
+      return const Color(0xFFE07A6A); // red
+    case Category.social:
+      return const Color(0xFF6AB0D0); // cyan
+    case Category.other:
+      return const Color(0xFF9AA3B8); // grey
+  }
+}
+
 IconData categoryIcon(Category c) {
   switch (c) {
     case Category.aadhaar:

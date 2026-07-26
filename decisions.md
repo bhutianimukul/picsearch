@@ -275,8 +275,19 @@ not more hues).
 splash front-loads comprehension) so the layout can stay sparse. One saturated
 accent over depth = premium energy without clutter.
 
-**Deliberately cut:** Multi-hue category coding; heavy chrome.
+**Deliberately cut:** Multi-hue category coding *on whole cards*.
 
 **Locked with user:** Home **A** (ask-first), **Iris** accent, and **both light +
-dark** themes via an in-app toggle (dark is the default / hero). Colours will move
-into a theme-aware layer so the swap is clean rather than find-and-replace.
+dark** themes via an in-app toggle (dark is the default / hero). Colours moved
+into a `PicColors` theme extension so the swap is clean rather than find-and-replace.
+
+**Refinement (user: "make the icons colourful"):** each category gets a distinct
+muted hue, applied *only to the type icon* (glyph + subtle tint) — card surfaces
+and borders stay monochrome. Earlier full-colour cards read as cluttered; pure
+monochrome read as dull. Colour on the icon alone is a glanceable category cue —
+signal, not decoration.
+
+**Verified end-to-end on an Android emulator:** pick 4 screenshots → on-device
+ML Kit OCR → detect/verify → classify → sort. The card was read, **Luhn-verified**
+(badge shown), and masked to `••••6467`; PAN / wifi / receipt each categorised
+correctly. The whole pipeline runs on-device, no network.
