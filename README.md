@@ -23,8 +23,9 @@ folders and answers questions in plain English.
 </p>
 
 <p align="center">
-  🎬 <a href="picsearch-demo.mp4"><b>30-second demo walkthrough</b></a>
-  &nbsp;·&nbsp; 📦 signed release APK: <code>flutter build apk --release</code>
+  🎬 <a href="picsearch-demo.mp4"><b>30-second demo</b></a>
+  &nbsp;·&nbsp; ⬇️ <a href="https://github.com/bhutianimukul/picsearch/releases/latest"><b>Download the signed APK</b></a>
+  &nbsp;·&nbsp; 📦 build it: <code>flutter build apk --release</code>
 </p>
 
 ---
@@ -302,6 +303,76 @@ prompts.md     the human prompts that drove the build
 ```
 
 See **[`FEATURES.md`](FEATURES.md)** for the full feature list and end goal.
+
+---
+
+## How search works + tech stack
+
+### Two search paths
+
+PicSearch answers a query on two levels — the first is always on, the second
+switches on when you add a key.
+
+**1 · On-device keyword search (no key, no network) —** `lib/src/search.dart`
+
+```
+"what's my wifi password"
+   │  lower-case, split
+   ▼
+strip stop-words  →  [wifi, password]      (drops what/my/is/…)
+   │
+   ▼
+for each record: OR-match tokens against
+   • extracted field values/labels  (+2 per hit)     ← weighted higher
+   • the raw OCR blob               (+1 per hit)
+   │
+   ▼
+keep score > 0, sort by score  →  the Airbnb wifi note ranks first
+```
+
+Fast, private, and typo-tolerant enough for "my hdfc card", "airbnb wifi",
+"rent upi". Voice search (`speech_to_text`) just feeds the same ranker.
+
+**2 · Ask Gemini — retrieval-augmented generation (RAG), done privately**
+
+When a key is set, the query can go to Gemini — but grounded strictly in your
+own vault, and only ever as *masked text*:
+
+| RAG stage | PicSearch (`lib/src/gemini.dart`) |
+|---|---|
+| **Retrieve** | your on-device vault is the corpus — each record's extracted fields + a short OCR snippet |
+| **Redact** | `redactForLlm` cuts every digit run of 6+ to its last 4 **before anything leaves the phone** — full card / Aadhaar / account numbers never go out; images never go out |
+| **Augment** | the redacted records are injected as a numbered context block (`buildContext`, capped at 50) into the prompt |
+| **Generate** | a system prompt tells the model to answer **only** from that context and never invent a number; it replies with the value and cites the item (e.g. *"Sunset2024 (Item 3)"*), or says it can't find it |
+
+Retrieval today is "all records, redacted, top-50" — plenty for a phone's vault;
+the on-device keyword ranker above is the natural pre-filter (top-*k*) if a vault
+ever outgrows the context window.
+
+### Models
+
+- **Text understanding / search / grouping / cleanup —** Google **Gemini,
+  `gemini-flash-latest`** (a rolling alias to the current stable flash tier —
+  resolves to *gemini-3.x-flash* today — so it never deprecates out from under a
+  saved key). Bring-your-own key, **verified with a live call on Save**.
+- **OCR —** Google **ML Kit Text Recognition v2** (`google_mlkit_text_recognition`),
+  bundled models, **100% on-device**.
+- **Structured AI (folders + cleanup)** — one `analyzeRecords` call using Gemini's
+  **`responseMimeType: application/json`** so grouping labels and clearable-junk
+  flags parse deterministically; results are cached on each record and refreshed
+  after a scan.
+
+### The rest of the stack
+
+| Concern | How |
+|---|---|
+| Extraction — *verify, don't guess* | **Luhn** (cards), **Verhoeff** (Aadhaar), regex (PAN/IFSC), `upi://` + VPA decode — pure Dart |
+| Encryption at rest | **AES-256-CBC** (`encrypt`) with a key sealed in the **Android Keystore** via `flutter_secure_storage` |
+| Biometric reveal | `local_auth` gates every sensitive value + the blurred image preview |
+| Gallery / scan | `photo_manager` (auto-detect), `image_picker` |
+| Actions | `url_launcher` (UPI `upi://pay` intent) |
+| State | `ChangeNotifier` + `InheritedNotifier` — no state-management package |
+| Proof | pure-Dart core → **59 tests** + a precision/recall **eval harness** |
 
 ---
 
