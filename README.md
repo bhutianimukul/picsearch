@@ -351,16 +351,17 @@ ever outgrows the context window.
 
 ### Models
 
-- **Text understanding / search / grouping / cleanup —** Google **Gemini,
-  `gemini-flash-latest`** (a rolling alias to the current stable flash tier —
-  resolves to *gemini-3.x-flash* today — so it never deprecates out from under a
-  saved key). Bring-your-own key, **verified with a live call on Save**.
-- **OCR —** Google **ML Kit Text Recognition v2** (`google_mlkit_text_recognition`),
-  bundled models, **100% on-device**.
-- **Structured AI (folders + cleanup)** — one `analyzeRecords` call using Gemini's
-  **`responseMimeType: application/json`** so grouping labels and clearable-junk
-  flags parse deterministically; results are cached on each record and refreshed
-  after a scan.
+| Job | Model | Runs |
+|---|---|---|
+| **Vision / OCR** — read text from a screenshot | Google **ML Kit Text Recognition v2** (`google_mlkit_text_recognition`) | **100% on-device** (bundled) |
+| **Voice** — dictate a query | the **device's own speech recognizer** (Android `SpeechRecognizer`, via `speech_to_text`) — on-device where the OS supports it | on-device / OS — **we bundle no audio model** |
+| **Text LLM** — search, smart folders, cleanup, Q&A | Google **Gemini `gemini-flash-latest`** — a rolling alias to the current stable flash tier (→ *gemini-3.x-flash* today), so it never deprecates from under a saved key. **BYOK, optional, verified on Save.** | cloud — **masked text only** |
+
+> **No multimodal / vision LLM is used.** The *only* model that ever sees your
+> pixels is the on-device OCR; Gemini receives redacted **text** only — never
+> images — and QR/UPI is parsed from that OCR text, not decoded by a separate
+> scanner. Structured tasks (folders + cleanup) use one `analyzeRecords` call with
+> Gemini's `responseMimeType: application/json` for deterministic parsing.
 
 ### The rest of the stack
 

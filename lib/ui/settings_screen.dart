@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../state/app_state.dart';
 import '../theme.dart';
@@ -19,6 +20,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _keyCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _openKeyPage() async {
+    final uri = Uri.parse('https://aistudio.google.com/apikey');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Couldn’t open the browser')));
+    }
   }
 
   @override
@@ -75,11 +85,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text('GEMINI · OPTIONAL', style: labelStyle.copyWith(color: c.inkFaint)),
           const SizedBox(height: 6),
           Text(
-            'A free Google Gemini key (runs on gemini-flash-latest). Create one at '
-            'aistudio.google.com → “Get API key”, then paste it below.',
+            'A free Google Gemini key (runs on gemini-flash-latest) unlocks AI '
+            'search, smart folders and cleanup. Paste it below.',
             style: TextStyle(fontSize: 12, color: c.inkDim, height: 1.4),
           ),
-          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _openKeyPage,
+              icon: const Icon(Icons.open_in_new, size: 15),
+              label: const Text('Get a free key at aistudio.google.com'),
+              style: TextButton.styleFrom(
+                foregroundColor: c.accent,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           if (state.hasGemini) _savedRow(c, state) else _entryRow(c, state),
           const SizedBox(height: 10),
           Text(
