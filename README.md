@@ -140,6 +140,6 @@ walkthrough, and the end goal.
 
 ---
 
-*Note: the Flutter package / repo folder is `snapvault` (the project's original
-name); the product was renamed to **PicSearch** — see `decisions.md` §10. The
-Android application id is `com.mukul.snapvault`.*
+*The project was briefly named SnapVault before launch (see `decisions.md` §10);
+everything now uses **PicSearch** — Dart package `picsearch`, Android application
+id `com.mukul.picsearch`.*

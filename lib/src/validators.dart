@@ -1,5 +1,5 @@
 /// Pure, dependency-free validation + extraction for the Indian ID / financial
-/// artifacts SnapVault finds in screenshots.
+/// artifacts PicSearch finds in screenshots.
 ///
 /// The design bet (see decisions.md §5): don't *guess* a document's type from
 /// "does this text look like an Aadhaar" — *verify* it with the real checksum.

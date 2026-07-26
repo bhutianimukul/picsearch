@@ -1,4 +1,4 @@
-package com.mukul.snapvault
+package com.mukul.picsearch
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
