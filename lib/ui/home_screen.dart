@@ -30,16 +30,7 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     Text('Good evening', style: TextStyle(color: c.inkDim, fontSize: 13)),
                     const Spacer(),
-                    Tooltip(
-                      message: state.hasGemini
-                          ? 'Gemini AI search on'
-                          : 'On-device · private',
-                      child: Icon(
-                        state.hasGemini ? Icons.auto_awesome : Icons.lock_outline,
-                        color: state.hasGemini ? c.accent : c.inkDim,
-                        size: 20,
-                      ),
-                    ),
+                    _AiStatusChip(hasGemini: state.hasGemini),
                   ],
                 ),
                 if (state.newCount > 0) _NewBanner(count: state.newCount),
@@ -82,6 +73,77 @@ void _openSearch(BuildContext context, [String query = '']) {
   Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => SearchScreen(initialQuery: query)),
   );
+}
+
+/// Top-right "AI on/off" chip. Tap for an info popup explaining how to enable
+/// natural-language AI search with a Gemini key (and its privacy).
+class _AiStatusChip extends StatelessWidget {
+  const _AiStatusChip({required this.hasGemini});
+  final bool hasGemini;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return GestureDetector(
+      onTap: () => _showInfo(context),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+        decoration: BoxDecoration(
+          color: hasGemini ? c.accent.withValues(alpha: 0.16) : c.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+              color: hasGemini ? c.accent.withValues(alpha: 0.45) : c.line),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(hasGemini ? Icons.auto_awesome : Icons.auto_awesome_outlined,
+              size: 15, color: hasGemini ? c.accent : c.inkDim),
+          const SizedBox(width: 6),
+          Text(hasGemini ? 'AI on' : 'AI off',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: hasGemini ? c.accent : c.inkDim)),
+          const SizedBox(width: 4),
+          Icon(Icons.info_outline,
+              size: 13, color: hasGemini ? c.accent : c.inkFaint),
+        ]),
+      ),
+    );
+  }
+
+  void _showInfo(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        final c = ctx.pic;
+        return AlertDialog(
+          backgroundColor: c.surface,
+          title: Row(children: [
+            Icon(Icons.auto_awesome, color: c.accent, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text(hasGemini ? 'AI search is on' : 'Turn on AI search')),
+          ]),
+          content: Text(
+            hasGemini
+                ? 'Ask in your own words — try “give me my cafe bill”, or tap the mic. '
+                    'Only masked text is sent to your Gemini key — never your images, '
+                    'never full card or Aadhaar numbers.'
+                : 'Add a free Gemini API key in Settings to ask questions in natural '
+                    'language. Until then, search matches keywords on-device.\n\n'
+                    'Get a key at aistudio.google.com. It’s stored in your device '
+                    'Keystore, and only masked text is ever sent — never your images, '
+                    'never full card or Aadhaar numbers.',
+            style: TextStyle(color: c.inkDim, fontSize: 13.5, height: 1.45),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('Got it')),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _NewBanner extends StatelessWidget {
