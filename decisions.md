@@ -445,7 +445,7 @@ a fat ~89 MB APK (the on-device OCR models dominate anyway).
 
 ---
 
-## 18. Pluggable AI engine: cloud Gemini ↔ on-device Gemma (branch)
+## 18. Pluggable AI engine: cloud Gemini ↔ on-device Gemma
 
 **The decision:** Made the AI a pluggable `AiEngine` (`lib/src/ai_engine.dart`)
 with two implementations — `GeminiEngine` (cloud, BYOK) and `LocalGemmaEngine`
@@ -461,7 +461,45 @@ rejected — it would upload the actual images (breaking the core promise) and
 *guess* digits instead of checksum-verifying them. The privacy-preserving way to
 add vision is the on-device path (Gemma is multimodal), which never sends a pixel.
 
-**Verification honesty:** analyze is clean, 59 tests pass, and the debug APK
-*builds* with the MediaPipe native dependency — but Gemma **inference can't run on
-the emulator** (needs a real phone + a downloaded ~550 MB model). So this lives on
-`feature/local-model`, not `main`/v1.0.0, until it's verified on a device.
+**Verification honesty:** analyze clean, 62 tests, and both APKs *build* with the
+MediaPipe native dependency — but Gemma **inference can't run on the emulator**
+(needs a real phone + a downloaded model). Built on `feature/local-model`, then —
+per the user's call — merged via **PR #1** and shipped in **v1.1.0**. On-device
+inference is a device-only test; the cloud path works everywhere.
+
+---
+
+## 19. On-device model access: an HF token, not a file picker
+
+**The decision:** The default Gemma `.task` is gated on Hugging Face, so the
+in-app download 401s without auth. Instead of a "download in the browser, then
+load the file" flow, Settings takes a **Hugging Face token** (with a link to the
+model page to accept the licence) and passes it to the existing download. Shipped
+in v1.1.1.
+
+**Why not `file_picker`:** it was tried first. Its build-compatible versions either
+use the removed `jcenter()` (ancient releases) or demand a newer `compileSdk` than
+the project targets — I wasn't going to destabilise a shipped build for a second
+download path when a token is dependency-free and fixes the same gating.
+(`AppState.loadLocalModelFile` stays, ready for a picker later.)
+
+---
+
+## 20. Read the QR, not just the text — on-device barcode decoding
+
+**The decision:** `MlKitOcrService` now also runs **ML Kit Barcode Scanning** and
+appends any decoded payload (e.g. a UPI QR's `upi://pay?pa=…&pn=…&am=…`) to the OCR
+text. The pure `analyzeText` pipeline then extracts it with no idea barcodes exist
+— so a UPI QR is read even when nothing is printed, and the whole transform stays
+unit-testable (the fake `OcrService` just returns text). Shipped in v1.1.2.
+
+**Payee name.** `analyzeText` adds a **"Payee name"** field for UPI: the `pn=`
+param (url-decoded, deterministic) if present, else a Title-Case name line adjacent
+to the VPA (a heuristic, for screenshots that print only the handle). It's a
+`DocType.unknown` field, so the eval is untouched (still 100%). Verified on-device
+— the UPI record shows UPI ID + Payee name.
+
+**Why decode the QR at all** (vs. the earlier text-only reading): OCR misreads the
+`upi://` glyphs and can't see data that's *only* inside the QR pixels. Decoding the
+barcode is the reliable source — and it feeds the exact same parser + name
+extraction, so it was additive, not a rewrite.
