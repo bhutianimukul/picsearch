@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../src/gemini.dart';
 import '../src/models.dart';
 import '../src/scan_pipeline.dart';
 import '../src/vault_store.dart';
@@ -18,6 +19,7 @@ class AppState extends ChangeNotifier {
   bool scanning = false;
   int scanTotal = 0;
   int scanDone = 0;
+  String? geminiKey;
 
   /// Load previously saved (encrypted) records on startup.
   Future<void> init() async {
@@ -25,6 +27,7 @@ class AppState extends ChangeNotifier {
     records
       ..clear()
       ..addAll(saved);
+    geminiKey = await _store.geminiKey();
     notifyListeners();
   }
 
@@ -62,6 +65,23 @@ class AppState extends ChangeNotifier {
     records.removeWhere(set.contains);
     await _store.save(records);
     notifyListeners();
+  }
+
+  // --- BYOK Gemini ---
+  bool get hasGemini => (geminiKey ?? '').trim().isNotEmpty;
+
+  Future<void> setGeminiKey(String? key) async {
+    await _store.setGeminiKey(key);
+    geminiKey = (key ?? '').trim().isEmpty ? null : key!.trim();
+    notifyListeners();
+  }
+
+  Future<String> askGemini(String query) {
+    final k = geminiKey;
+    if (k == null || k.trim().isEmpty) {
+      throw StateError('No Gemini key set');
+    }
+    return GeminiClient(k.trim()).ask(query, records);
   }
 
   Map<Category, int> get categoryCounts {

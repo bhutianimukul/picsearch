@@ -29,6 +29,9 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _speechReady = false;
   bool _listening = false;
 
+  String? _geminiAnswer;
+  bool _geminiBusy = false;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +83,62 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Future<void> _askGemini() async {
+    final state = AppScope.of(context);
+    setState(() => _geminiBusy = true);
+    try {
+      final answer = await state.askGemini(_q);
+      if (mounted) setState(() => _geminiAnswer = answer);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _geminiAnswer =
+            'Couldn\'t reach Gemini — check your key and connection.');
+      }
+    } finally {
+      if (mounted) setState(() => _geminiBusy = false);
+    }
+  }
+
+  Widget _geminiPanel(PicColors c) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: _geminiAnswer == null
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _geminiBusy ? null : _askGemini,
+                  icon: _geminiBusy
+                      ? SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: c.accent))
+                      : Icon(Icons.auto_awesome, size: 16, color: c.accent),
+                  label: Text(_geminiBusy ? 'Asking Gemini…' : 'Ask Gemini',
+                      style: TextStyle(color: c.accent)),
+                ),
+              )
+            : Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Color.alphaBlend(c.accent.withValues(alpha: 0.08), c.surface),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: c.accent.withValues(alpha: 0.35)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.auto_awesome, size: 15, color: c.accent),
+                      const SizedBox(width: 8),
+                      Text('GEMINI', style: labelStyle.copyWith(color: c.accent)),
+                    ]),
+                    const SizedBox(height: 8),
+                    Text(_geminiAnswer!,
+                        style: TextStyle(color: c.ink, fontSize: 14, height: 1.4)),
+                  ],
+                ),
+              ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final c = context.pic;
@@ -109,7 +168,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: TextField(
                       controller: _ctrl,
                       autofocus: true,
-                      onChanged: (v) => setState(() => _q = v),
+                      onChanged: (v) => setState(() {
+                        _q = v;
+                        _geminiAnswer = null;
+                      }),
                       style: TextStyle(color: c.ink, fontSize: 15),
                       decoration: InputDecoration(
                         border: InputBorder.none,
@@ -124,6 +186,8 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
           ),
+          if (AppScope.of(context).hasGemini && _q.trim().isNotEmpty)
+            _geminiPanel(c),
           Expanded(
             child: showSuggestions
                 ? _suggestionsView(c)

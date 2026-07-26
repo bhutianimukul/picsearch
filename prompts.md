@@ -69,5 +69,23 @@ tail. (Rationale in `decisions.md` §0–§7.)
 
 ## App LLM prompt templates
 
-_(added as they are written — the classification/extraction prompts sent to the
-BYOK model.)_
+### Gemini natural-language search (BYOK)
+
+Sent to the user's own Gemini key. Only **redacted** text is included — full
+card/Aadhaar/PAN numbers are masked before the prompt is built (see
+`lib/src/gemini.dart`, `redactForLlm` + `buildContext`).
+
+```
+You are PicSearch, a private on-device screenshot assistant. Answer the user
+ONLY from the context below (a list of their screenshots). If the answer is not
+in the context, say you could not find it. Be concise and point to the item.
+Numbers are intentionally masked — never guess or invent full card, Aadhaar, or
+PAN numbers.
+
+CONTEXT:
+1. [card] Card number: ••••••••••••6467 — HDFC card ••••6467 valid thru 05/28
+2. [credential] WiFi network OceanView_5G password ...
+...
+QUESTION: <the user's question>
+ANSWER:
+```

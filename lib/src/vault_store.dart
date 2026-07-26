@@ -45,4 +45,17 @@ class VaultStore {
     final f = await _file();
     await f.writeAsBytes(codec.encode(records), flush: true);
   }
+
+  // --- BYOK Gemini key (also Keystore-held) ---
+  static const _geminiKeyName = 'picsearch_gemini_key';
+
+  Future<String?> geminiKey() => _secure.read(key: _geminiKeyName);
+
+  Future<void> setGeminiKey(String? key) async {
+    if (key == null || key.trim().isEmpty) {
+      await _secure.delete(key: _geminiKeyName);
+    } else {
+      await _secure.write(key: _geminiKeyName, value: key.trim());
+    }
+  }
 }
