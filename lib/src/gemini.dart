@@ -39,6 +39,72 @@ const _system =
 String buildPrompt(String query, String context) =>
     '$_system\n\nCONTEXT:\n$context\nQUESTION: $query\nANSWER:';
 
+/// One record's AI analysis: which folder, and whether it's clearable junk (with
+/// a reason). Shared by the cloud (Gemini) and on-device (Gemma) engines.
+typedef RecordInsight = ({String group, bool clear, String reason});
+
+/// The grouping + cleanup prompt — asks for a JSON object keyed by item number.
+String buildAnalyzePrompt(List<ScreenshotRecord> records) {
+  final b = StringBuffer();
+  for (var i = 0; i < records.length; i++) {
+    final r = records[i];
+    final fields = r.fields.map((f) => '${f.label}: ${f.masked}').join(', ');
+    var snip = redactForLlm(r.ocrText).trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (snip.length > 120) snip = '${snip.substring(0, 120)}…';
+    final body = snip.isEmpty ? '(image, no readable text)' : snip;
+    b.writeln('${i + 1}. ${fields.isEmpty ? '' : '$fields — '}$body');
+  }
+  return 'Organize these phone screenshots into folders and flag clearable junk. '
+      'Each numbered line is one screenshot’s extracted text (sensitive numbers '
+      'are masked). For every item return a JSON object with:\n'
+      '- "group": a short Title Case folder name (1–2 words). Reuse the same '
+      'name for similar items; aim for 3–8 folders. Good names: Payments, '
+      'Identity, Banking, Travel, Shopping, Receipts, Passwords, Personal, Misc.\n'
+      '- "clear": true ONLY for transient junk safe to delete — one-time OTP or '
+      'verification codes, obvious duplicates, expired noise. NEVER true for '
+      'IDs, cards, bank details, passwords/wifi, or receipts.\n'
+      '- "reason": a few words on why it is clearable (empty when clear is false).\n'
+      'Return ONLY a JSON object mapping each item number (as a string) to that '
+      'object.\n\n$b';
+}
+
+/// Pulls the first `{…}` JSON object out of [text] — local models often wrap it
+/// in prose or ```json fences, so we don't assume a clean body.
+Map<String, dynamic> firstJsonObject(String text) {
+  var t = text.trim();
+  final start = t.indexOf('{');
+  final end = t.lastIndexOf('}');
+  if (start >= 0 && end > start) t = t.substring(start, end + 1);
+  try {
+    return jsonDecode(t) as Map<String, dynamic>;
+  } catch (_) {
+    return const {};
+  }
+}
+
+/// Parses the analyze response into one [RecordInsight] per record; gaps and
+/// malformed entries default to a safe (Misc, not-clearable).
+List<RecordInsight> parseAnalyze(String jsonText, int n) {
+  final map = firstJsonObject(jsonText);
+  return List.generate(n, (i) {
+    final v = map['${i + 1}'];
+    if (v is Map) {
+      final g = v['group'];
+      final rs = v['reason'];
+      return (
+        group: (g is String && g.trim().isNotEmpty) ? g.trim() : 'Misc',
+        clear: v['clear'] == true,
+        reason: (rs is String) ? rs.trim() : '',
+      );
+    }
+    return (
+      group: (v is String && v.trim().isNotEmpty) ? v.trim() : 'Misc',
+      clear: false,
+      reason: '',
+    );
+  });
+}
+
 class GeminiException implements Exception {
   GeminiException(this.message);
   final String message;
@@ -119,32 +185,9 @@ class GeminiClient {
   /// Analyzes [records] from their redacted text only (never images, never full
   /// numbers): a folder name per record, plus whether it's clearable junk and
   /// why. Returns one entry per record, aligned by index.
-  Future<List<({String group, bool clear, String reason})>> analyzeRecords(
+  Future<List<RecordInsight>> analyzeRecords(
       List<ScreenshotRecord> records) async {
     if (records.isEmpty) return const [];
-    final b = StringBuffer();
-    for (var i = 0; i < records.length; i++) {
-      final r = records[i];
-      final fields = r.fields.map((f) => '${f.label}: ${f.masked}').join(', ');
-      var snip = redactForLlm(r.ocrText).trim().replaceAll(RegExp(r'\s+'), ' ');
-      if (snip.length > 120) snip = '${snip.substring(0, 120)}…';
-      final body = snip.isEmpty ? '(image, no readable text)' : snip;
-      b.writeln('${i + 1}. ${fields.isEmpty ? '' : '$fields — '}$body');
-    }
-    final prompt =
-        'Organize these phone screenshots into folders and flag clearable junk. '
-        'Each numbered line is one screenshot’s extracted text (sensitive numbers '
-        'are masked). For every item return a JSON object with:\n'
-        '- "group": a short Title Case folder name (1–2 words). Reuse the same '
-        'name for similar items; aim for 3–8 folders. Good names: Payments, '
-        'Identity, Banking, Travel, Shopping, Receipts, Passwords, Personal, Misc.\n'
-        '- "clear": true ONLY for transient junk safe to delete — one-time OTP or '
-        'verification codes, obvious duplicates, expired noise. NEVER true for '
-        'IDs, cards, bank details, passwords/wifi, or receipts.\n'
-        '- "reason": a few words on why it is clearable (empty when clear is false).\n'
-        'Return ONLY a JSON object mapping each item number (as a string) to that '
-        'object.\n\n$b';
-
     final uri = Uri.parse(
         'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey');
     final resp = await _client.post(
@@ -154,7 +197,7 @@ class GeminiClient {
         'contents': [
           {
             'parts': [
-              {'text': prompt}
+              {'text': buildAnalyzePrompt(records)}
             ]
           }
         ],
@@ -164,31 +207,7 @@ class GeminiClient {
     if (resp.statusCode != 200) {
       throw GeminiException('Analysis failed (${resp.statusCode}).');
     }
-    final text = _extractText(jsonDecode(resp.body)) ?? '{}';
-    Map<String, dynamic> map;
-    try {
-      map = jsonDecode(text) as Map<String, dynamic>;
-    } catch (_) {
-      map = const {};
-    }
-    return List.generate(records.length, (i) {
-      final v = map['${i + 1}'];
-      if (v is Map) {
-        final g = v['group'];
-        final rs = v['reason'];
-        return (
-          group: (g is String && g.trim().isNotEmpty) ? g.trim() : 'Misc',
-          clear: v['clear'] == true,
-          reason: (rs is String) ? rs.trim() : '',
-        );
-      }
-      // Tolerate a bare string label if the model ignored the object shape.
-      return (
-        group: (v is String && v.trim().isNotEmpty) ? v.trim() : 'Misc',
-        clear: false,
-        reason: '',
-      );
-    });
+    return parseAnalyze(_extractText(jsonDecode(resp.body)) ?? '{}', records.length);
   }
 
   String? _extractText(dynamic data) {
