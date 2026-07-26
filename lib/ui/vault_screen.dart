@@ -145,6 +145,16 @@ class _CategoryScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: categoryColor(category).withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(categoryIcon(category), size: 19, color: categoryColor(category)),
+                    ),
+                    const SizedBox(width: 13),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

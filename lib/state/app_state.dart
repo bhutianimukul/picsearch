@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../src/cleanup.dart';
 import '../src/gallery_scanner.dart';
 import '../src/gemini.dart';
+import '../src/image_vault.dart';
 import '../src/models.dart';
 import '../src/scan_pipeline.dart';
 import '../src/vault_store.dart';
@@ -16,6 +18,7 @@ class AppState extends ChangeNotifier {
   final VaultStore _store;
   final ImagePicker _picker = ImagePicker();
   final GalleryScanner _gallery = GalleryScanner();
+  final ImageVault _images = ImageVault();
 
   final List<ScreenshotRecord> records = <ScreenshotRecord>[];
   bool scanning = false;
@@ -30,7 +33,7 @@ class AppState extends ChangeNotifier {
     final saved = await _store.load();
     records
       ..clear()
-      ..addAll(saved);
+      ..addAll(_dedupe(saved));
     geminiKey = await _store.geminiKey();
     processedIds
       ..clear()
@@ -71,12 +74,18 @@ class AppState extends ChangeNotifier {
       final recs = <ScreenshotRecord>[];
       for (final a in assets) {
         final file = await a.file;
-        if (file != null) recs.add(await _pipeline.scanOne(file.path));
+        if (file != null) {
+          var rec = await _pipeline.scanOne(file.path);
+          try {
+            rec = rec.copyWith(imagePath: await _images.store(file.path));
+          } catch (_) {/* keep original path if the copy fails */}
+          recs.add(rec);
+        }
         processedIds.add(a.id);
         scanDone++;
         notifyListeners();
       }
-      records.insertAll(0, recs);
+      _addRecords(recs);
       await _store.save(records);
       await _store.saveProcessedIds(processedIds);
       newCount = 0;
@@ -100,11 +109,15 @@ class AppState extends ChangeNotifier {
     try {
       final recs = <ScreenshotRecord>[];
       for (final f in files) {
-        recs.add(await _pipeline.scanOne(f.path));
+        var rec = await _pipeline.scanOne(f.path);
+        try {
+          rec = rec.copyWith(imagePath: await _images.store(f.path));
+        } catch (_) {/* keep original path if the copy fails */}
+        recs.add(rec);
         scanDone++;
         notifyListeners(); // drive the progress overlay
       }
-      records.insertAll(0, recs);
+      _addRecords(recs);
       await _store.save(records);
       return recs.length;
     } finally {
@@ -140,6 +153,24 @@ class AppState extends ChangeNotifier {
     return GeminiClient(k.trim()).ask(query, records);
   }
 
+  /// Insert new records at the front, then drop any duplicates (keeps newest).
+  void _addRecords(List<ScreenshotRecord> recs) {
+    records.insertAll(0, recs);
+    final deduped = _dedupe(records);
+    records
+      ..clear()
+      ..addAll(deduped);
+  }
+
+  List<ScreenshotRecord> _dedupe(List<ScreenshotRecord> list) {
+    final seen = <String>{};
+    final out = <ScreenshotRecord>[];
+    for (final r in list) {
+      if (seen.add(dedupKey(r))) out.add(r);
+    }
+    return out;
+  }
+
   Map<Category, int> get categoryCounts {
     final m = <Category, int>{};
     for (final r in records) {
@@ -150,6 +181,30 @@ class AppState extends ChangeNotifier {
 
   List<ScreenshotRecord> byCategory(Category c) =>
       records.where((r) => r.category == c).toList();
+
+  ScreenshotRecord? recordByPath(String path) {
+    for (final r in records) {
+      if (r.imagePath == path) return r;
+    }
+    return null;
+  }
+
+  Future<void> addFieldToRecord(String imagePath, ExtractedField field) async {
+    final i = records.indexWhere((r) => r.imagePath == imagePath);
+    if (i < 0) return;
+    records[i] = records[i].copyWith(extra: [...records[i].extra, field]);
+    await _store.save(records);
+    notifyListeners();
+  }
+
+  Future<void> removeField(String imagePath, ExtractedField field) async {
+    final i = records.indexWhere((r) => r.imagePath == imagePath);
+    if (i < 0) return;
+    records[i] =
+        records[i].copyWith(extra: [...records[i].extra]..remove(field));
+    await _store.save(records);
+    notifyListeners();
+  }
 }
 
 /// Makes [AppState] available down the tree and rebuilds dependents on change.

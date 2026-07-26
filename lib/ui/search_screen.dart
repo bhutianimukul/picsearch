@@ -203,6 +203,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _suggestionsView(PicColors c) => ListView(
         padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
         children: [
+          if (!AppScope.of(context).hasGemini) _aiHint(c),
           Row(
             children: [
               Icon(Icons.auto_awesome, size: 16, color: c.accent),
@@ -214,6 +215,32 @@ class _SearchScreenState extends State<SearchScreen> {
           for (final s in _suggestions)
             _ThoughtBubble(text: s, onTap: () => _setQuery(s)),
         ],
+      );
+
+  Widget _aiHint(PicColors c) => Container(
+        margin: const EdgeInsets.only(bottom: 18),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(c.accent.withValues(alpha: 0.10), c.surface),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.accent.withValues(alpha: 0.35)),
+        ),
+        child: Row(children: [
+          Icon(Icons.auto_awesome, color: c.accent, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Turn on AI search',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                const SizedBox(height: 2),
+                Text('Add a Gemini key in Settings to ask in your own words. Until then, search matches keywords on-device.',
+                    style: TextStyle(color: c.inkDim, fontSize: 12)),
+              ],
+            ),
+          ),
+        ]),
       );
 
   Widget _noResults(PicColors c) => Center(

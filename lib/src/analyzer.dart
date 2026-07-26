@@ -13,6 +13,21 @@ AnalysisResult analyzeText(String ocrText) {
   final category = classify(ocrText, detections);
   final fields = detections.map(toField).toList();
 
+  // Card sub-field we can read from the surrounding text: expiry (MM/YY).
+  if (detections.any((d) => d.type == DocType.card)) {
+    final exp = RegExp(r'\b(0[1-9]|1[0-2])\s*/\s*(\d{2})\b').firstMatch(ocrText);
+    if (exp != null) {
+      final v = '${exp.group(1)}/${exp.group(2)}';
+      fields.add(ExtractedField(
+        type: DocType.unknown,
+        label: 'Expiry',
+        value: v,
+        masked: v,
+        sensitive: false,
+      ));
+    }
+  }
+
   final tags = <String>{};
   if (category == Category.otp) tags.add('deletable:otp');
 

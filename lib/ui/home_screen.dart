@@ -30,7 +30,16 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     Text('Good evening', style: TextStyle(color: c.inkDim, fontSize: 13)),
                     const Spacer(),
-                    Icon(Icons.lock_outline, color: c.inkDim, size: 20),
+                    Tooltip(
+                      message: state.hasGemini
+                          ? 'Gemini AI search on'
+                          : 'On-device · private',
+                      child: Icon(
+                        state.hasGemini ? Icons.auto_awesome : Icons.lock_outline,
+                        color: state.hasGemini ? c.accent : c.inkDim,
+                        size: 20,
+                      ),
+                    ),
                   ],
                 ),
                 if (state.newCount > 0) _NewBanner(count: state.newCount),

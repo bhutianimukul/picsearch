@@ -104,24 +104,41 @@ class ScreenshotRecord {
   final String ocrText;
   final AnalysisResult analysis;
 
+  /// Fields the user added by hand (e.g. CVV, cardholder name) — merged after
+  /// the auto-extracted ones.
+  final List<ExtractedField> extra;
+
   const ScreenshotRecord({
     required this.imagePath,
     required this.ocrText,
     required this.analysis,
+    this.extra = const [],
   });
 
   Category get category => analysis.category;
-  List<ExtractedField> get fields => analysis.fields;
+  List<ExtractedField> get fields => [...analysis.fields, ...extra];
+
+  ScreenshotRecord copyWith({String? imagePath, List<ExtractedField>? extra}) =>
+      ScreenshotRecord(
+        imagePath: imagePath ?? this.imagePath,
+        ocrText: ocrText,
+        analysis: analysis,
+        extra: extra ?? this.extra,
+      );
 
   Map<String, dynamic> toJson() => {
         'imagePath': imagePath,
         'ocrText': ocrText,
         'analysis': analysis.toJson(),
+        'extra': extra.map((f) => f.toJson()).toList(),
       };
 
   factory ScreenshotRecord.fromJson(Map<String, dynamic> j) => ScreenshotRecord(
         imagePath: j['imagePath'] as String,
         ocrText: j['ocrText'] as String,
         analysis: AnalysisResult.fromJson(j['analysis'] as Map<String, dynamic>),
+        extra: ((j['extra'] as List?) ?? const [])
+            .map((e) => ExtractedField.fromJson(e as Map<String, dynamic>))
+            .toList(),
       );
 }

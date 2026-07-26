@@ -1,4 +1,5 @@
 import 'package:picsearch/src/analyzer.dart';
+import 'package:picsearch/src/validators.dart';
 
 import 'samples.dart';
 
@@ -44,7 +45,12 @@ EvalReport runEval(List<EvalSample> samples) {
           'CATEGORY  "${s.name}": expected ${s.expectedCategory.name}, got ${result.category.name}');
     }
 
-    final predicted = result.fields.map((f) => f.type).toSet();
+    // Only score validated *ID* extractions; DocType.unknown fields (e.g. an
+    // auto-read card expiry) aren't ID detections.
+    final predicted = result.fields
+        .map((f) => f.type)
+        .where((t) => t != DocType.unknown)
+        .toSet();
     for (final t in predicted) {
       if (s.expectedTypes.contains(t)) {
         tp++;
