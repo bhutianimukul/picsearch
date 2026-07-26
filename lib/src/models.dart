@@ -66,3 +66,20 @@ class AnalysisResult {
     this.tags = const {},
   });
 }
+
+/// One analysed screenshot: where the image lives (on-device only), the OCR
+/// text it yielded, and the structured [AnalysisResult] derived from it.
+class ScreenshotRecord {
+  final String imagePath;
+  final String ocrText;
+  final AnalysisResult analysis;
+
+  const ScreenshotRecord({
+    required this.imagePath,
+    required this.ocrText,
+    required this.analysis,
+  });
+
+  Category get category => analysis.category;
+  List<ExtractedField> get fields => analysis.fields;
+}
