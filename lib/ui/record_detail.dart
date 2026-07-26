@@ -39,7 +39,7 @@ class _RecordDetailState extends State<RecordDetail> {
         title: Text(categoryLabel(record.category)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.note_add_outlined),
             tooltip: 'Add a detail',
             onPressed: () => _addDetail(context, state, record),
           ),
@@ -187,67 +187,144 @@ class _RecordDetailState extends State<RecordDetail> {
 
   Future<void> _addDetail(
       BuildContext context, AppState state, ScreenshotRecord record) async {
+    const options = ['Expiry', 'Cardholder name', 'CVV', 'Note'];
     var label = 'Expiry';
-    var sensitive = false;
+    var private = false;
     final valueCtrl = TextEditingController();
 
-    await showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         final c = ctx.pic;
         return StatefulBuilder(
-          builder: (ctx, setLocal) => AlertDialog(
-            backgroundColor: c.surface,
-            title: const Text('Add a detail'),
-            content: Column(mainAxisSize: MainAxisSize.min, children: [
-              DropdownButton<String>(
-                value: label,
-                isExpanded: true,
-                items: const [
-                  DropdownMenuItem(value: 'Expiry', child: Text('Expiry')),
-                  DropdownMenuItem(value: 'Cardholder name', child: Text('Cardholder name')),
-                  DropdownMenuItem(value: 'CVV', child: Text('CVV')),
-                  DropdownMenuItem(value: 'Note', child: Text('Note')),
-                ],
-                onChanged: (v) => setLocal(() {
-                  label = v!;
-                  sensitive = v == 'CVV';
-                }),
-              ),
-              TextField(
-                controller: valueCtrl,
-                autofocus: true,
-                decoration: const InputDecoration(hintText: 'Value'),
-              ),
-            ]),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                    backgroundColor: c.accent, foregroundColor: c.accentInk),
-                onPressed: () {
-                  final v = valueCtrl.text.trim();
-                  if (v.isNotEmpty) {
-                    state.addFieldToRecord(
-                      record.imagePath,
-                      ExtractedField(
-                        type: DocType.unknown,
-                        label: label,
-                        value: v,
-                        masked: sensitive ? ''.padRight(v.length, '•') : v,
-                        sensitive: sensitive,
+          builder: (ctx, setLocal) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                  border: Border.all(color: c.line),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 26),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: c.line, borderRadius: BorderRadius.circular(2)),
                       ),
-                    );
-                  }
-                  Navigator.pop(ctx);
-                },
-                child: const Text('Add'),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      Icon(Icons.note_add_outlined, color: c.accent, size: 20),
+                      const SizedBox(width: 10),
+                      const Text('Add a detail',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    ]),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final o in options)
+                          _typeChip(c, o, label == o,
+                              () => setLocal(() { label = o; private = o == 'CVV'; })),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: valueCtrl,
+                      autofocus: true,
+                      obscureText: private,
+                      style: TextStyle(color: c.ink),
+                      decoration: InputDecoration(
+                        labelText: label,
+                        labelStyle: TextStyle(color: c.inkDim),
+                        filled: true,
+                        fillColor: c.surface2,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: c.line),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: c.accent),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: private,
+                      activeThumbColor: c.accent,
+                      title: const Text('Keep private', style: TextStyle(fontSize: 14)),
+                      subtitle: Text('Hidden until you reveal it, like your card number',
+                          style: TextStyle(color: c.inkDim, fontSize: 12)),
+                      onChanged: (v) => setLocal(() => private = v),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: c.accent,
+                          foregroundColor: c.accentInk,
+                          minimumSize: const Size.fromHeight(50),
+                        ),
+                        onPressed: () {
+                          final v = valueCtrl.text.trim();
+                          if (v.isNotEmpty) {
+                            state.addFieldToRecord(
+                              record.imagePath,
+                              ExtractedField(
+                                type: DocType.unknown,
+                                label: label,
+                                value: v,
+                                masked: private ? ''.padRight(v.length, '•') : v,
+                                sensitive: private,
+                              ),
+                            );
+                          }
+                          Navigator.pop(ctx);
+                        },
+                        child: Text('Add $label'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
+
+  Widget _typeChip(PicColors c, String label, bool selected, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: selected ? c.accent.withValues(alpha: 0.18) : c.surface2,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: selected ? c.accent : c.line),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? c.accent : c.inkDim,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      );
 }
