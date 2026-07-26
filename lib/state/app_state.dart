@@ -45,6 +45,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Remove records from the vault and persist. (Clears from PicSearch's vault,
+  /// not from the phone's gallery — deleting the original photo is a separate,
+  /// permission-gated OS action, deliberately out of scope for now.)
+  Future<void> removeRecords(Iterable<ScreenshotRecord> toRemove) async {
+    final set = toRemove.toSet();
+    records.removeWhere(set.contains);
+    await _store.save(records);
+    notifyListeners();
+  }
+
   Map<Category, int> get categoryCounts {
     final m = <Category, int>{};
     for (final r in records) {

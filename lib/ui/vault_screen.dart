@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../src/cleanup.dart';
 import '../src/models.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import 'cleanup_screen.dart';
 import 'record_detail.dart';
 import 'ui_helpers.dart';
 
@@ -17,6 +19,7 @@ class VaultScreen extends StatelessWidget {
     final state = AppScope.of(context);
     final counts = state.categoryCounts;
     final cats = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final cleanup = deletableCandidates(state.records);
 
     return Scaffold(
       appBar: AppBar(
@@ -25,11 +28,18 @@ class VaultScreen extends StatelessWidget {
       ),
       body: state.records.isEmpty
           ? const _Empty()
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: cats.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 9),
-              itemBuilder: (context, i) => _CategoryRow(category: cats[i], count: counts[cats[i]]!),
+          : Column(
+              children: [
+                if (cleanup.isNotEmpty) _CleanupBanner(count: cleanup.length),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: cats.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 9),
+                    itemBuilder: (context, i) => _CategoryRow(category: cats[i], count: counts[cats[i]]!),
+                  ),
+                ),
+              ],
             ),
     );
   }
@@ -165,5 +175,46 @@ class _CategoryScreen extends StatelessWidget {
   String _snippet(String text) {
     final t = text.trim().replaceAll(RegExp(r'\s+'), ' ');
     return t.length <= 40 ? t : '${t.substring(0, 40)}…';
+  }
+}
+
+class _CleanupBanner extends StatelessWidget {
+  const _CleanupBanner({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(13),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(13),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const CleanupScreen())),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: c.accent.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.auto_delete_outlined, color: c.accent, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('$count item${count == 1 ? '' : 's'} you can clear',
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                ),
+                Text('Review',
+                    style: TextStyle(color: c.accent, fontWeight: FontWeight.w600, fontSize: 13)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
