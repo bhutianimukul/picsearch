@@ -49,7 +49,8 @@ folders and answers questions in plain English.
 - **Scan** your gallery → each screenshot is OCR'd **on-device** (Google ML Kit).
 - **Extract & verify** the values — a card only files as a card if it passes the
   **Luhn** checksum; an Aadhaar only if it passes **Verhoeff**; PAN/IFSC by
-  structure; UPI by decoding the `upi://` payload (or a bare `name@bank` VPA).
+  structure; UPI by **decoding the QR** (or a printed `upi://` / `name@bank`),
+  including the payee **name**.
 - **Vault** — auto-albums, sensitive values **masked** (`••••6467`), revealed only
   behind biometrics, one-tap **copy**, type-aware actions (e.g. *Pay via UPI*).
 - **Search** — ask in your own words, by text or **voice**.
@@ -92,7 +93,7 @@ messy OCR and is trivially unit-testable.
 | Aadhaar | **Verhoeff** checksum (the real 12th-digit algorithm) |
 | PAN | structural regex `ABCDE1234F` |
 | IFSC | 4-letter bank code + mandatory `0` + 6 alphanumerics |
-| UPI | decode `upi://pay?pa=…`, or a bare `name@bank` VPA (emails excluded) |
+| UPI | **decode the QR barcode** (ML Kit) → `upi://pay?pa=…&pn=…`, or read a printed `upi://` / bare `name@bank` VPA; the **payee name** comes from `pn` or a nearby line |
 
 ### 3 · The Vault — auto-albums by type
 
@@ -361,7 +362,7 @@ ever outgrows the context window.
 
 | Job | Model | Runs |
 |---|---|---|
-| **Vision / OCR** — read text from a screenshot | Google **ML Kit Text Recognition v2** (`google_mlkit_text_recognition`) | **100% on-device** (bundled) |
+| **Vision / OCR** — read text **and decode QR/barcodes** | Google **ML Kit Text Recognition v2** + **Barcode Scanning** | **100% on-device** (bundled) |
 | **Voice** — dictate a query | the **device's own speech recognizer** (Android `SpeechRecognizer`, via `speech_to_text`) — on-device where the OS supports it | on-device / OS — **we bundle no audio model** |
 | **Text LLM — cloud** | Google **Gemini `gemini-flash-latest`** — a rolling alias to the current stable flash tier (→ *gemini-3.x-flash* today), so it never deprecates from under a saved key. **BYOK, optional, verified on Save.** | cloud — **masked text only** |
 | **Text LLM — on-device (opt-in)** | **Gemma** (1B `.task`) via **MediaPipe** (`flutter_gemma`) — download once in Settings, then search / smart folders / cleanup run with **no key and no network at all** | 100% on-device |

@@ -54,10 +54,15 @@ AnalysisResult analyzeText(String ocrText) {
 /// above/below a VPA in the OCR text — a heuristic for screenshots that print
 /// only the handle. Returns null when neither is confident.
 String? upiPayeeName(String text) {
-  // 1) explicit pn= in a upi:// link
-  final pn = RegExp(r'[?&]pn=([^&\s]+)', caseSensitive: false).firstMatch(text);
+  // 1) explicit pn= in a upi:// link (value runs to the next & or line end, so a
+  //    QR-decoded name with literal spaces survives; decode is fault-tolerant).
+  final pn = RegExp(r'[?&]pn=([^&\r\n]+)', caseSensitive: false).firstMatch(text);
   if (pn != null) {
-    final v = Uri.decodeComponent(pn.group(1)!.replaceAll('+', ' ')).trim();
+    var v = pn.group(1)!.replaceAll('+', ' ');
+    try {
+      v = Uri.decodeComponent(v);
+    } catch (_) {/* leave as-is on malformed % escapes */}
+    v = v.trim();
     if (v.isNotEmpty) return v;
   }
   // 2) a name line next to a VPA
