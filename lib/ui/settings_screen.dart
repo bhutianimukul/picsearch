@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../src/ai_engine.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 
@@ -111,7 +112,119 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'your images, never full card or Aadhaar numbers.',
             style: TextStyle(fontSize: 11.5, color: c.inkFaint),
           ),
+          const SizedBox(height: 24),
+          Text('ON-DEVICE MODEL · NO KEY',
+              style: labelStyle.copyWith(color: c.inkFaint)),
+          const SizedBox(height: 6),
+          Text(
+            'Run AI entirely on your phone with a local Gemma model (MediaPipe) — '
+            'no key, no network, nothing leaves the device. Best on a real phone '
+            'with a few GB of RAM.',
+            style: TextStyle(fontSize: 12, color: c.inkDim, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          _localModelCard(c, state),
         ],
+      ),
+    );
+  }
+
+  Widget _localModelCard(PicColors c, AppState state) {
+    final box = BoxDecoration(
+      color: c.surface,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: c.line),
+    );
+    if (state.downloadingModel) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: box,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Downloading Gemma… ${state.modelPercent}%',
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: state.modelPercent <= 0 ? null : state.modelPercent / 100,
+              minHeight: 6,
+              backgroundColor: c.surface2,
+              valueColor: AlwaysStoppedAnimation(c.accent),
+            ),
+          ),
+        ]),
+      );
+    }
+    if (state.localModelReady) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: box.copyWith(
+            border: Border.all(color: c.accent.withValues(alpha: 0.4))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.check_circle_outline, color: c.accent, size: 18),
+            const SizedBox(width: 10),
+            const Expanded(
+                child: Text('On-device model ready',
+                    style: TextStyle(fontWeight: FontWeight.w600))),
+          ]),
+          if (state.hasGemini) ...[
+            const SizedBox(height: 14),
+            Text('ANSWER WITH', style: labelStyle.copyWith(color: c.inkFaint)),
+            const SizedBox(height: 8),
+            Row(children: [
+              _engineChip(c, state, 'On-device', AiMode.local),
+              const SizedBox(width: 8),
+              _engineChip(c, state, 'Cloud (Gemini)', AiMode.cloud),
+            ]),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text('AI runs entirely on your phone — no key, no network.',
+                  style: TextStyle(color: c.inkDim, fontSize: 12)),
+            ),
+        ]),
+      );
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: () => state.downloadLocalModel(),
+          icon: const Icon(Icons.download_outlined),
+          label: const Text('Download Gemma 3 1B  (~550 MB)'),
+          style: FilledButton.styleFrom(
+            backgroundColor: c.accent,
+            foregroundColor: c.accentInk,
+            minimumSize: const Size.fromHeight(48),
+          ),
+        ),
+      ),
+      if (state.modelError != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(state.modelError!,
+              style: TextStyle(color: c.inkDim, fontSize: 12)),
+        ),
+    ]);
+  }
+
+  Widget _engineChip(PicColors c, AppState state, String label, AiMode mode) {
+    final selected = state.aiMode == mode;
+    return GestureDetector(
+      onTap: () => state.setAiMode(mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? c.accent.withValues(alpha: 0.18) : c.surface2,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? c.accent : c.line),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: selected ? c.accent : c.inkDim,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13)),
       ),
     );
   }

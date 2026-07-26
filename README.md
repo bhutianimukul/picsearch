@@ -355,13 +355,18 @@ ever outgrows the context window.
 |---|---|---|
 | **Vision / OCR** — read text from a screenshot | Google **ML Kit Text Recognition v2** (`google_mlkit_text_recognition`) | **100% on-device** (bundled) |
 | **Voice** — dictate a query | the **device's own speech recognizer** (Android `SpeechRecognizer`, via `speech_to_text`) — on-device where the OS supports it | on-device / OS — **we bundle no audio model** |
-| **Text LLM** — search, smart folders, cleanup, Q&A | Google **Gemini `gemini-flash-latest`** — a rolling alias to the current stable flash tier (→ *gemini-3.x-flash* today), so it never deprecates from under a saved key. **BYOK, optional, verified on Save.** | cloud — **masked text only** |
+| **Text LLM — cloud** | Google **Gemini `gemini-flash-latest`** — a rolling alias to the current stable flash tier (→ *gemini-3.x-flash* today), so it never deprecates from under a saved key. **BYOK, optional, verified on Save.** | cloud — **masked text only** |
+| **Text LLM — on-device (opt-in)** | **Gemma** (1B `.task`) via **MediaPipe** (`flutter_gemma`) — download once in Settings, then search / smart folders / cleanup run with **no key and no network at all** | 100% on-device |
 
-> **No multimodal / vision LLM is used.** The *only* model that ever sees your
-> pixels is the on-device OCR; Gemini receives redacted **text** only — never
-> images — and QR/UPI is parsed from that OCR text, not decoded by a separate
-> scanner. Structured tasks (folders + cleanup) use one `analyzeRecords` call with
-> Gemini's `responseMimeType: application/json` for deterministic parsing.
+The AI is a **pluggable engine** (`lib/src/ai_engine.dart`) — pick **Cloud (Gemini)**
+or **On-device (Gemma)** in Settings; the rest of the app is identical either way.
+
+> **No cloud vision LLM is used.** The *only* model that sees your pixels is the
+> on-device OCR; the text LLM receives redacted **text** only — never images — and
+> QR/UPI is parsed from that OCR text, not a separate scanner. (If you want vision
+> for textless images, the *on-device* Gemma path can do it multimodally — the
+> only way here that keeps a pixel from ever leaving the phone.) Structured tasks
+> use one `analyzeRecords` call, JSON-parsed leniently so both engines work.
 
 ### The rest of the stack
 

@@ -442,3 +442,26 @@ recognizers (Chinese, Devanagari, …) we don't bundle, which fails the build.
 A sideloaded demo APK gains nothing from obfuscation, so minify is off (the
 upgrade path — add the generated keep rules — is noted in the gradle file). Cost:
 a fat ~89 MB APK (the on-device OCR models dominate anyway).
+
+---
+
+## 18. Pluggable AI engine: cloud Gemini ↔ on-device Gemma (branch)
+
+**The decision:** Made the AI a pluggable `AiEngine` (`lib/src/ai_engine.dart`)
+with two implementations — `GeminiEngine` (cloud, BYOK) and `LocalGemmaEngine`
+(on-device Gemma via MediaPipe / `flutter_gemma`) — so users can run search,
+smart folders and cleanup **with no key and no network at all**. Settings gains a
+"Download Gemma" flow + a Cloud/On-device switch. The prompt-building and JSON
+parsing were extracted into engine-agnostic helpers (`buildAnalyzePrompt`,
+`parseAnalyze`, `firstJsonObject`) shared by both; the parser is lenient because
+local models don't guarantee clean JSON.
+
+**Why on-device, not a cloud vision LLM:** a cloud vision LLM was considered and
+rejected — it would upload the actual images (breaking the core promise) and
+*guess* digits instead of checksum-verifying them. The privacy-preserving way to
+add vision is the on-device path (Gemma is multimodal), which never sends a pixel.
+
+**Verification honesty:** analyze is clean, 59 tests pass, and the debug APK
+*builds* with the MediaPipe native dependency — but Gemma **inference can't run on
+the emulator** (needs a real phone + a downloaded ~550 MB model). So this lives on
+`feature/local-model`, not `main`/v1.0.0, until it's verified on a device.

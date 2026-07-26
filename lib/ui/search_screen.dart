@@ -87,12 +87,12 @@ class _SearchScreenState extends State<SearchScreen> {
     final state = AppScope.of(context);
     setState(() => _geminiBusy = true);
     try {
-      final answer = await state.askGemini(_q);
+      final answer = await state.askAi(_q);
       if (mounted) setState(() => _geminiAnswer = answer);
     } catch (_) {
       if (mounted) {
         setState(() => _geminiAnswer =
-            'Couldn\'t reach Gemini — check your key and connection.');
+            'Couldn\'t get an answer — check your key / model and connection.');
       }
     } finally {
       if (mounted) setState(() => _geminiBusy = false);
@@ -112,7 +112,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           height: 15,
                           child: CircularProgressIndicator(strokeWidth: 2, color: c.accent))
                       : Icon(Icons.auto_awesome, size: 16, color: c.accent),
-                  label: Text(_geminiBusy ? 'Asking Gemini…' : 'Ask Gemini',
+                  label: Text(_geminiBusy ? 'Asking AI…' : 'Ask AI',
                       style: TextStyle(color: c.accent)),
                 ),
               )
@@ -129,7 +129,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     Row(children: [
                       Icon(Icons.auto_awesome, size: 15, color: c.accent),
                       const SizedBox(width: 8),
-                      Text('GEMINI', style: labelStyle.copyWith(color: c.accent)),
+                      Text('AI', style: labelStyle.copyWith(color: c.accent)),
                     ]),
                     const SizedBox(height: 8),
                     Text(_geminiAnswer!,
@@ -186,7 +186,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
           ),
-          if (AppScope.of(context).hasGemini && _q.trim().isNotEmpty)
+          if (AppScope.of(context).aiReady && _q.trim().isNotEmpty)
             _geminiPanel(c),
           Expanded(
             child: showSuggestions
@@ -203,7 +203,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _suggestionsView(PicColors c) => ListView(
         padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
         children: [
-          if (!AppScope.of(context).hasGemini) _aiHint(c),
+          if (!AppScope.of(context).aiReady) _aiHint(c),
           Row(
             children: [
               Icon(Icons.auto_awesome, size: 16, color: c.accent),

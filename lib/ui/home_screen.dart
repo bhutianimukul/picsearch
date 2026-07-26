@@ -30,7 +30,7 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     Text(_greeting(), style: TextStyle(color: c.inkDim, fontSize: 13)),
                     const Spacer(),
-                    _AiStatusChip(hasGemini: state.hasGemini),
+                    _AiStatusChip(hasGemini: state.aiReady),
                   ],
                 ),
                 if (state.newCount > 0) _NewBanner(count: state.newCount),

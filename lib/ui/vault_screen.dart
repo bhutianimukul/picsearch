@@ -16,7 +16,7 @@ class VaultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.pic;
     final state = AppScope.of(context);
-    final ai = state.hasGemini;
+    final ai = state.aiReady;
     final groups = _buildGroups(state);
     final cleanup = state.cleanupCandidates;
     final firstRun = ai && state.grouping && groups.isEmpty;

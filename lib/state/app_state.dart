@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../src/ai_engine.dart';
 import '../src/cleanup.dart';
 import '../src/gallery_scanner.dart';
 import '../src/gemini.dart';
@@ -31,6 +32,12 @@ class AppState extends ChangeNotifier {
   int newCount = 0;
   bool grouping = false; // an AI regroup is in flight
 
+  // --- AI engine (cloud Gemini ↔ on-device Gemma) ---
+  AiMode aiMode = AiMode.cloud;
+  bool downloadingModel = false;
+  int modelPercent = 0;
+  String? modelError;
+
   /// Load previously saved (encrypted) records on startup.
   Future<void> init() async {
     final saved = await _store.load();
@@ -41,6 +48,8 @@ class AppState extends ChangeNotifier {
     processedIds
       ..clear()
       ..addAll(await _store.loadProcessedIds());
+    // Prefer the on-device model if one is already downloaded and there's no key.
+    if (LocalGemma.isReady && !hasGemini) aiMode = AiMode.local;
     notifyListeners();
     refreshNewCount(); // best-effort; may prompt for gallery access
   }
@@ -96,7 +105,7 @@ class AppState extends ChangeNotifier {
     } finally {
       scanning = false;
       notifyListeners();
-      if (hasGemini) unawaited(regroupWithAi());
+      if (aiReady) unawaited(regroupWithAi());
     }
   }
 
@@ -127,7 +136,7 @@ class AppState extends ChangeNotifier {
     } finally {
       scanning = false;
       notifyListeners();
-      if (hasGemini) unawaited(regroupWithAi());
+      if (aiReady) unawaited(regroupWithAi());
     }
   }
 
@@ -141,39 +150,81 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- BYOK Gemini ---
+  // --- AI engine: cloud (Gemini BYOK) ↔ on-device (Gemma via MediaPipe) ---
   bool get hasGemini => (geminiKey ?? '').trim().isNotEmpty;
+
+  /// The active engine, or null if nothing is ready (no key / no local model).
+  AiEngine? get engine {
+    if (aiMode == AiMode.local) {
+      return LocalGemma.isReady ? const LocalGemmaEngine() : null;
+    }
+    return hasGemini ? GeminiEngine(geminiKey!) : null;
+  }
+
+  bool get aiReady => engine != null;
+  bool get localModelReady => LocalGemma.isReady;
 
   Future<void> setGeminiKey(String? key) async {
     await _store.setGeminiKey(key);
     geminiKey = (key ?? '').trim().isEmpty ? null : key!.trim();
+    if (hasGemini) aiMode = AiMode.cloud;
     notifyListeners();
     // Turning AI on regroups the existing vault into smart folders.
-    if (hasGemini && records.isNotEmpty) unawaited(regroupWithAi());
+    if (aiReady && records.isNotEmpty) unawaited(regroupWithAi());
   }
 
   /// Returns null if [key] is a working Gemini key, else a short error message.
   Future<String?> verifyGeminiKey(String key) =>
       GeminiClient(key.trim()).verifyKey();
 
-  Future<String> askGemini(String query) {
-    final k = geminiKey;
-    if (k == null || k.trim().isEmpty) {
-      throw StateError('No Gemini key set');
+  /// Switch between the cloud and on-device engines.
+  void setAiMode(AiMode mode) {
+    aiMode = mode;
+    notifyListeners();
+    if (aiReady && records.isNotEmpty) unawaited(regroupWithAi());
+  }
+
+  /// Download the on-device Gemma model (progress via [modelPercent]) and switch
+  /// to it. Inference needs a real device — MediaPipe LLM won't run on an emulator.
+  Future<void> downloadLocalModel({String? hfToken}) async {
+    if (downloadingModel) return;
+    downloadingModel = true;
+    modelError = null;
+    modelPercent = 0;
+    notifyListeners();
+    try {
+      await LocalGemma.download((p) {
+        modelPercent = p;
+        notifyListeners();
+      }, hfToken: hfToken);
+      aiMode = AiMode.local;
+      modelPercent = 100;
+      notifyListeners();
+      if (records.isNotEmpty) unawaited(regroupWithAi());
+    } catch (e) {
+      modelError = 'Couldn’t load the model: $e';
+    } finally {
+      downloadingModel = false;
+      notifyListeners();
     }
-    return GeminiClient(k.trim()).ask(query, records);
+  }
+
+  Future<String> askAi(String query) {
+    final e = engine;
+    if (e == null) throw StateError('No AI engine ready');
+    return e.ask(query, records);
   }
 
   /// Re-analyses the vault from redacted text only: an AI folder name per record
-  /// plus a clearable-junk flag. Runs after a scan and when a key is added;
+  /// plus a clearable-junk flag. Runs after a scan and when the engine changes;
   /// leaves existing results untouched on failure.
   Future<void> regroupWithAi() async {
-    final k = geminiKey;
-    if (k == null || k.trim().isEmpty || records.isEmpty || grouping) return;
+    final e = engine;
+    if (e == null || records.isEmpty || grouping) return;
     grouping = true;
     notifyListeners();
     try {
-      final insights = await GeminiClient(k.trim()).analyzeRecords(records);
+      final insights = await e.analyzeRecords(records);
       for (var i = 0; i < records.length && i < insights.length; i++) {
         records[i] = records[i].copyWith(
           aiGroup: insights[i].group,
@@ -190,14 +241,14 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Screenshots suggested for clearing — AI-flagged when a key is set, else the
-  /// on-device heuristics (one-time codes + duplicates).
-  List<ScreenshotRecord> get cleanupCandidates => hasGemini
+  /// Screenshots suggested for clearing — AI-flagged when an engine is active,
+  /// else the on-device heuristics (one-time codes + duplicates).
+  List<ScreenshotRecord> get cleanupCandidates => aiReady
       ? records.where((r) => r.aiClearable).toList()
       : deletableCandidates(records);
 
   /// Why a candidate is clearable, shown in the cleanup list.
-  String cleanupReason(ScreenshotRecord r) => hasGemini
+  String cleanupReason(ScreenshotRecord r) => aiReady
       ? ((r.aiClearReason?.isNotEmpty ?? false) ? r.aiClearReason! : 'Suggested by AI')
       : deletableReason(r, records);
 
