@@ -22,6 +22,11 @@ folders and answers questions in plain English.
   <img src="docs/screenshots/gemini-answer.png" width="240" alt="Ask Gemini">
 </p>
 
+<p align="center">
+  🎬 <a href="picsearch-demo.mp4"><b>30-second demo walkthrough</b></a>
+  &nbsp;·&nbsp; 📦 signed release APK: <code>flutter build apk --release</code>
+</p>
+
 ---
 
 ## Contents
