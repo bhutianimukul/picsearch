@@ -80,4 +80,30 @@ void main() {
     expect(out[2].group, 'Misc'); // gap filled
     expect(out[2].clear, isFalse);
   });
+
+  // Local (on-device) models rarely return clean JSON — they wrap it in prose or
+  // ```json fences. The shared parser must dig it out; this is the riskiest bit
+  // of the local engine and IS unit-testable without a device.
+  test('firstJsonObject digs JSON out of a fenced, prose-wrapped reply', () {
+    const reply =
+        'Sure! Here are the folders:\n```json\n{"1":{"group":"Payments"}}\n```\nHope that helps!';
+    final m = firstJsonObject(reply);
+    expect(m['1'], isA<Map>());
+    expect((m['1'] as Map)['group'], 'Payments');
+  });
+
+  test('parseAnalyze survives a messy local-model reply', () {
+    const reply =
+        'Okay:\n```\n{"1":{"group":"Identity","clear":false},'
+        '"2":{"group":"Codes","clear":true,"reason":"one-time OTP"}}\n```';
+    final out = parseAnalyze(reply, 2);
+    expect(out[0].group, 'Identity');
+    expect(out[1].clear, isTrue);
+    expect(out[1].reason, 'one-time OTP');
+  });
+
+  test('parseAnalyze falls back to safe defaults on total garbage', () {
+    final out = parseAnalyze('I could not do that.', 2);
+    expect(out.every((e) => e.group == 'Misc' && !e.clear), isTrue);
+  });
 }
