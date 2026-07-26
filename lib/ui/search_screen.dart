@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../src/models.dart';
 import '../src/search.dart';
@@ -9,7 +10,8 @@ import 'ui_helpers.dart';
 
 const _suggestions = ['My HDFC card', 'Airbnb wifi', 'PAN number', 'Rent UPI QR'];
 
-/// Search over the analysed screenshots — the core "find the pic you mean" flow.
+/// Search over the analysed screenshots — the core "find the pic you mean" flow,
+/// by text or voice.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key, this.initialQuery = ''});
   final String initialQuery;
@@ -23,8 +25,33 @@ class _SearchScreenState extends State<SearchScreen> {
       TextEditingController(text: widget.initialQuery);
   late String _q = widget.initialQuery;
 
+  final SpeechToText _speech = SpeechToText();
+  bool _speechReady = false;
+  bool _listening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    _speechReady = await _speech.initialize(
+      onStatus: (s) {
+        if ((s == 'notListening' || s == 'done') && mounted) {
+          setState(() => _listening = false);
+        }
+      },
+      onError: (_) {
+        if (mounted) setState(() => _listening = false);
+      },
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _speech.stop();
     _ctrl.dispose();
     super.dispose();
   }
@@ -33,6 +60,24 @@ class _SearchScreenState extends State<SearchScreen> {
     _ctrl.text = v;
     _ctrl.selection = TextSelection.collapsed(offset: v.length);
     setState(() => _q = v);
+  }
+
+  Future<void> _toggleListen() async {
+    if (!_speechReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Voice input isn\'t available on this device')));
+      return;
+    }
+    if (_listening) {
+      await _speech.stop();
+      setState(() => _listening = false);
+      return;
+    }
+    setState(() => _listening = true);
+    await _speech.listen(
+      onResult: (r) => _setQuery(r.recognizedWords),
+      listenOptions: SpeechListenOptions(partialResults: true),
+    );
   }
 
   @override
@@ -53,7 +98,8 @@ class _SearchScreenState extends State<SearchScreen> {
               decoration: BoxDecoration(
                 color: c.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: c.line),
+                border: Border.all(
+                    color: _listening ? c.accent : c.line, width: _listening ? 1.5 : 1),
               ),
               child: Row(
                 children: [
@@ -65,18 +111,15 @@ class _SearchScreenState extends State<SearchScreen> {
                       autofocus: true,
                       onChanged: (v) => setState(() => _q = v),
                       style: TextStyle(color: c.ink, fontSize: 15),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: 'Ask your screenshots…',
+                        hintText: _listening ? 'Listening…' : 'Ask your screenshots…',
+                        hintStyle: TextStyle(
+                            color: _listening ? c.accent : c.inkFaint),
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.mic_none, color: c.accent),
-                    tooltip: 'Voice',
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Voice search is coming soon'))),
-                  ),
+                  _MicButton(listening: _listening, onTap: _toggleListen),
                 ],
               ),
             ),
@@ -94,29 +137,22 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _suggestionsView(PicColors c) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
         children: [
-          Text('TRY ASKING', style: labelStyle.copyWith(color: c.inkFaint)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
             children: [
-              for (final s in _suggestions)
-                GestureDetector(
-                  onTap: () => _setQuery(s),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: c.line),
-                    ),
-                    child: Text(s, style: TextStyle(color: c.ink, fontSize: 13)),
-                  ),
-                ),
+              Icon(Icons.auto_awesome, size: 16, color: c.accent),
+              const SizedBox(width: 8),
+              Text('ASK ME THINGS LIKE', style: labelStyle.copyWith(color: c.inkFaint)),
             ],
           ),
+          const SizedBox(height: 18),
+          for (var i = 0; i < _suggestions.length; i++)
+            _ThoughtBubble(
+              text: _suggestions[i],
+              alignRight: i.isOdd,
+              onTap: () => _setQuery(_suggestions[i]),
+            ),
         ],
       );
 
@@ -183,5 +219,69 @@ class _SearchScreenState extends State<SearchScreen> {
   String _snippet(String text) {
     final t = text.trim().replaceAll(RegExp(r'\s+'), ' ');
     return t.length <= 44 ? t : '${t.substring(0, 44)}…';
+  }
+}
+
+/// A suggestion styled as an AI "thought bubble" — asymmetric tail, accent tint,
+/// alternating side, sparkle glyph.
+class _ThoughtBubble extends StatelessWidget {
+  const _ThoughtBubble({required this.text, required this.alignRight, required this.onTap});
+  final String text;
+  final bool alignRight;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Align(
+        alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(c.accent.withValues(alpha: 0.10), c.surface),
+              border: Border.all(color: c.accent.withValues(alpha: 0.35)),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(alignRight ? 18 : 4),
+                bottomRight: Radius.circular(alignRight ? 4 : 18),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_awesome, size: 15, color: c.accent),
+                const SizedBox(width: 9),
+                Text(text, style: TextStyle(color: c.ink, fontSize: 14)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MicButton extends StatelessWidget {
+  const _MicButton({required this.listening, required this.onTap});
+  final bool listening;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.pic;
+    return IconButton(
+      onPressed: onTap,
+      tooltip: listening ? 'Stop' : 'Voice',
+      icon: Icon(listening ? Icons.mic : Icons.mic_none,
+          color: listening ? c.accent : c.inkDim),
+      style: listening
+          ? IconButton.styleFrom(backgroundColor: c.accent.withValues(alpha: 0.16))
+          : null,
+    );
   }
 }
