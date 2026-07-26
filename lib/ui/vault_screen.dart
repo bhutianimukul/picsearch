@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../src/cleanup.dart';
 import '../src/models.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
@@ -19,7 +18,7 @@ class VaultScreen extends StatelessWidget {
     final state = AppScope.of(context);
     final ai = state.hasGemini;
     final groups = _buildGroups(state);
-    final cleanup = deletableCandidates(state.records);
+    final cleanup = state.cleanupCandidates;
     final firstRun = ai && state.grouping && groups.isEmpty;
 
     return Scaffold(

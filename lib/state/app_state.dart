@@ -164,26 +164,42 @@ class AppState extends ChangeNotifier {
     return GeminiClient(k.trim()).ask(query, records);
   }
 
-  /// Re-clusters the vault into AI-named folders from redacted text only. Runs
-  /// after a scan and when a key is added; leaves existing groups on failure.
+  /// Re-analyses the vault from redacted text only: an AI folder name per record
+  /// plus a clearable-junk flag. Runs after a scan and when a key is added;
+  /// leaves existing results untouched on failure.
   Future<void> regroupWithAi() async {
     final k = geminiKey;
     if (k == null || k.trim().isEmpty || records.isEmpty || grouping) return;
     grouping = true;
     notifyListeners();
     try {
-      final groups = await GeminiClient(k.trim()).groupRecords(records);
-      for (var i = 0; i < records.length && i < groups.length; i++) {
-        records[i] = records[i].copyWith(aiGroup: groups[i]);
+      final insights = await GeminiClient(k.trim()).analyzeRecords(records);
+      for (var i = 0; i < records.length && i < insights.length; i++) {
+        records[i] = records[i].copyWith(
+          aiGroup: insights[i].group,
+          aiClearable: insights[i].clear,
+          aiClearReason: insights[i].reason,
+        );
       }
       await _store.save(records);
     } catch (_) {
-      // keep whatever grouping we already have; Vault falls back where null
+      // keep whatever we already have; Vault falls back where results are null
     } finally {
       grouping = false;
       notifyListeners();
     }
   }
+
+  /// Screenshots suggested for clearing — AI-flagged when a key is set, else the
+  /// on-device heuristics (one-time codes + duplicates).
+  List<ScreenshotRecord> get cleanupCandidates => hasGemini
+      ? records.where((r) => r.aiClearable).toList()
+      : deletableCandidates(records);
+
+  /// Why a candidate is clearable, shown in the cleanup list.
+  String cleanupReason(ScreenshotRecord r) => hasGemini
+      ? ((r.aiClearReason?.isNotEmpty ?? false) ? r.aiClearReason! : 'Suggested by AI')
+      : deletableReason(r, records);
 
   /// Insert new records at the front, then drop any duplicates (keeps newest).
   void _addRecords(List<ScreenshotRecord> recs) {

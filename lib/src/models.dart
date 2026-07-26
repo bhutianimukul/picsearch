@@ -113,25 +113,39 @@ class ScreenshotRecord {
   /// on-device [category] when this is absent.
   final String? aiGroup;
 
+  /// Whether the AI flagged this as clearable junk (a one-time OTP, a duplicate,
+  /// transient noise), with a short reason. Set in the same pass as [aiGroup].
+  final bool aiClearable;
+  final String? aiClearReason;
+
   const ScreenshotRecord({
     required this.imagePath,
     required this.ocrText,
     required this.analysis,
     this.extra = const [],
     this.aiGroup,
+    this.aiClearable = false,
+    this.aiClearReason,
   });
 
   Category get category => analysis.category;
   List<ExtractedField> get fields => [...analysis.fields, ...extra];
 
-  ScreenshotRecord copyWith(
-          {String? imagePath, List<ExtractedField>? extra, String? aiGroup}) =>
+  ScreenshotRecord copyWith({
+    String? imagePath,
+    List<ExtractedField>? extra,
+    String? aiGroup,
+    bool? aiClearable,
+    String? aiClearReason,
+  }) =>
       ScreenshotRecord(
         imagePath: imagePath ?? this.imagePath,
         ocrText: ocrText,
         analysis: analysis,
         extra: extra ?? this.extra,
         aiGroup: aiGroup ?? this.aiGroup,
+        aiClearable: aiClearable ?? this.aiClearable,
+        aiClearReason: aiClearReason ?? this.aiClearReason,
       );
 
   Map<String, dynamic> toJson() => {
@@ -140,6 +154,8 @@ class ScreenshotRecord {
         'analysis': analysis.toJson(),
         'extra': extra.map((f) => f.toJson()).toList(),
         'aiGroup': aiGroup,
+        'aiClearable': aiClearable,
+        'aiClearReason': aiClearReason,
       };
 
   factory ScreenshotRecord.fromJson(Map<String, dynamic> j) => ScreenshotRecord(
@@ -150,5 +166,7 @@ class ScreenshotRecord {
             .map((e) => ExtractedField.fromJson(e as Map<String, dynamic>))
             .toList(),
         aiGroup: j['aiGroup'] as String?,
+        aiClearable: (j['aiClearable'] as bool?) ?? false,
+        aiClearReason: j['aiClearReason'] as String?,
       );
 }

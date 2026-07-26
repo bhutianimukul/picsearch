@@ -49,13 +49,17 @@ void main() {
     expect(await GeminiClient('k', client: client).verifyKey(), isNull);
   });
 
-  test('groupRecords maps JSON labels onto records, gaps become Misc', () async {
+  test('analyzeRecords parses group + clear flags, gaps become Misc', () async {
+    final inner = jsonEncode({
+      '1': {'group': 'Payments', 'clear': false},
+      '2': {'group': 'Codes', 'clear': true, 'reason': 'one-time OTP'},
+    });
     final body = jsonEncode({
       'candidates': [
         {
           'content': {
             'parts': [
-              {'text': '{"1":"Payments","2":"Identity"}'}
+              {'text': inner}
             ]
           }
         }
@@ -64,10 +68,16 @@ void main() {
     final client = MockClient((_) async => http.Response(body, 200));
     final recs = [
       _rec('a.png', 'upi rahul@okhdfc'),
-      _rec('b.png', 'PAN ABCDE1234F'),
-      _rec('c.png', 'blurry meme'),
+      _rec('b.png', '123456 is your OTP'),
+      _rec('c.png', 'blurry meme'), // no entry -> gap
     ];
-    final groups = await GeminiClient('k', client: client).groupRecords(recs);
-    expect(groups, ['Payments', 'Identity', 'Misc']);
+    final out = await GeminiClient('k', client: client).analyzeRecords(recs);
+    expect(out[0].group, 'Payments');
+    expect(out[0].clear, isFalse);
+    expect(out[1].group, 'Codes');
+    expect(out[1].clear, isTrue);
+    expect(out[1].reason, 'one-time OTP');
+    expect(out[2].group, 'Misc'); // gap filled
+    expect(out[2].clear, isFalse);
   });
 }

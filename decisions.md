@@ -420,3 +420,9 @@ redacted text is sent (never images, never full numbers) — a `groupRecords` ca
 returns one folder label per record, stored on the record (`aiGroup`), cached,
 and recomputed automatically after each scan or when a key is added. Falls back
 to the on-device type grouping when no key is set.
+
+**AI cleanup (same pass).** The one `analyzeRecords` call also flags each item as
+clearable junk or not, with a short reason (`aiClearable`/`aiClearReason`) — so
+when a key is on, the "you can clear" list is AI-judged (safe defaults: never
+IDs/cards/passwords/receipts) instead of the hard-coded OTP+duplicate heuristic.
+One call does both grouping and cleanup, kept cheap.

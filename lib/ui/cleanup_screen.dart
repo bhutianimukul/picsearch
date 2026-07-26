@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../src/cleanup.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import 'ui_helpers.dart';
@@ -14,7 +13,7 @@ class CleanupScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.pic;
     final state = AppScope.of(context);
-    final candidates = deletableCandidates(state.records);
+    final candidates = state.cleanupCandidates;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Review & clear')),
@@ -45,7 +44,7 @@ class CleanupScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(deletableReason(r, state.records),
+                                  Text(state.cleanupReason(r),
                                       style: const TextStyle(
                                           fontSize: 13.5, fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 4),
