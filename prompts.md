@@ -1,6 +1,6 @@
 # prompts.md
 
-A running log of the human-authored prompts that drove SnapVault's build
+A running log of the human-authored prompts that drove PicSearch's build
 (AI-assisted, per the round's encouragement to use AI tools). Paired with
 `decisions.md`: that file records the *choices*, this one records the *asks*.
 As the app's LLM prompt templates are written, they're captured here too.
@@ -20,7 +20,7 @@ tail. (Rationale in `decisions.md` §0–§7.)
 
 ---
 
-## 2026-07-26 — SnapVault product spec (canonical)
+## 2026-07-26 — PicSearch product spec (canonical)
 
 > **Problem.** A screenshot is a "save it now, deal with it later" reflex —
 > recipe, wifi password, tweet, address, error, product. The photo library is a

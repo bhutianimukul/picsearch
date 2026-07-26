@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snapvault/src/validators.dart';
-import 'package:snapvault/src/models.dart';
-import 'package:snapvault/src/classifier.dart';
+import 'package:picsearch/src/validators.dart';
+import 'package:picsearch/src/models.dart';
+import 'package:picsearch/src/classifier.dart';
 
 void main() {
   group('classifyByKeywords', () {

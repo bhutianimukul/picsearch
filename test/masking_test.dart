@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snapvault/src/validators.dart';
-import 'package:snapvault/src/masking.dart';
+import 'package:picsearch/src/validators.dart';
+import 'package:picsearch/src/masking.dart';
 
 void main() {
   group('mask', () {

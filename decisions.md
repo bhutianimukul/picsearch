@@ -1,18 +1,18 @@
 # decisions.md
 
-A running log of the real calls made building **SnapVault**. Format per decision:
+A running log of the real calls made building **PicSearch**. Format per decision:
 what I chose, what I seriously considered, why, and what I deliberately cut.
 
 Newest decisions are appended at the bottom.
 
 ---
 
-## 0. What SnapVault is (problem framing)
+## 0. What PicSearch is (problem framing)
 
 **The decision:** Interpret "turn messy documents into structured, queryable data"
 (Problem 3) as: **your phone's screenshot pile is the messy document corpus.**
 People screenshot IDs, cards, UPI QRs, receipts, tickets, wifi passwords — then
-never find them again. SnapVault turns that write-only pile into a private,
+never find them again. PicSearch turns that write-only pile into a private,
 searchable, structured wallet.
 
 **Alternatives considered:**
@@ -236,3 +236,47 @@ stay local, and full card/Aadhaar/PAN numbers are masked before sending. No key
 where users actually care (the image of the document), while letting text power
 natural-language search. Gemini is therefore a first-class (BYOK-gated) part of
 querying, not an off-by-default afterthought.
+
+---
+
+## 10. Renamed: SnapVault → PicSearch
+
+**The decision:** Renamed the product to **PicSearch**.
+
+**Reasoning:** "PicSearch" names the actual job — *find the screenshot you mean* —
+better than the vault metaphor. Privacy/vault stays a core feature, not the name;
+and the search-first framing matches the new home design (ask/voice-first).
+
+**What changed:** app display name (`android:label`) and the Dart package
+(`snapvault` → `picsearch`, all imports updated, 37 tests still green).
+
+**Kept for now (cosmetic, not user-visible):** the Android `applicationId`
+(`com.mukul.snapvault`) and the repo folder name — will align when the public
+repo is created (Ship task). Not worth the churn mid-build.
+
+---
+
+## 11. UI direction: minimal, ask-first, motion-led (CRED-inspired)
+
+**The decision:** Home is a near-empty, ask-first screen — search + voice docked
+low over ambient motion (drifting aurora, screenshots orbiting a vault mark). The
+category/album grid moved off the home into a **Vault tab**. An animated splash
+performs the pitch (scan → tag → sort → seal). Near-monochrome on true-black with
+**one vivid gradient accent** (Iris default; Lime/Aqua alternates) and glow for
+depth.
+
+**Alternatives considered & rejected along the way:** a dense home with album grid
++ chips + banner (too cluttered); an 8-colour category palette (read as noisy /
+"AI-built"); flat monochrome brass (read as dull — fixed with luminosity depth,
+not more hues).
+
+**Reasoning:** Each screen gets one job — home *asks*, Vault *browses* — so
+"minimal" reads as intentional, not empty. Motion carries the personality (and the
+splash front-loads comprehension) so the layout can stay sparse. One saturated
+accent over depth = premium energy without clutter.
+
+**Deliberately cut:** Multi-hue category coding; heavy chrome.
+
+**Locked with user:** Home **A** (ask-first), **Iris** accent, and **both light +
+dark** themes via an in-app toggle (dark is the default / hero). Colours will move
+into a theme-aware layer so the swap is clean rather than find-and-replace.

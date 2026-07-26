@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snapvault/src/models.dart';
-import 'package:snapvault/src/ocr_service.dart';
-import 'package:snapvault/src/scan_pipeline.dart';
+import 'package:picsearch/src/models.dart';
+import 'package:picsearch/src/ocr_service.dart';
+import 'package:picsearch/src/scan_pipeline.dart';
 
 /// Fake OCR: returns canned text per path, so the pipeline is testable with no
 /// device, camera, or ML Kit.
