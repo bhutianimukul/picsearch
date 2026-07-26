@@ -13,6 +13,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _keyCtrl = TextEditingController();
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -72,7 +73,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 18),
           Text('GEMINI · OPTIONAL', style: labelStyle.copyWith(color: c.inkFaint)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
+          Text(
+            'A free Google Gemini key (runs on gemini-flash-latest). Create one at '
+            'aistudio.google.com → “Get API key”, then paste it below.',
+            style: TextStyle(fontSize: 12, color: c.inkDim, height: 1.4),
+          ),
+          const SizedBox(height: 12),
           if (state.hasGemini) _savedRow(c, state) else _entryRow(c, state),
           const SizedBox(height: 10),
           Text(
@@ -111,6 +118,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: TextField(
               controller: _keyCtrl,
               obscureText: true,
+              enabled: !_saving,
+              onSubmitted: (_) => _save(state),
               style: dataStyle.copyWith(fontSize: 13, color: c.ink),
               decoration: InputDecoration(
                 hintText: 'Paste your Gemini API key',
@@ -131,19 +140,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(width: 8),
           FilledButton(
-            onPressed: () {
-              final v = _keyCtrl.text.trim();
-              if (v.isEmpty) return;
-              state.setGeminiKey(v);
-              _keyCtrl.clear();
-              FocusScope.of(context).unfocus();
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gemini key saved')));
-            },
+            onPressed: _saving ? null : () => _save(state),
             style: FilledButton.styleFrom(
                 backgroundColor: c.accent, foregroundColor: c.accentInk),
-            child: const Text('Save'),
+            child: _saving
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: c.accentInk))
+                : const Text('Save'),
           ),
         ],
       );
+
+  /// Verifies the pasted key with a tiny live request before storing it, so a
+  /// bad key is caught here rather than at the first question.
+  Future<void> _save(AppState state) async {
+    final v = _keyCtrl.text.trim();
+    if (v.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _saving = true);
+    final err = await state.verifyGeminiKey(v);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    if (err != null) {
+      messenger.showSnackBar(SnackBar(content: Text(err)));
+      return;
+    }
+    await state.setGeminiKey(v);
+    _keyCtrl.clear();
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Gemini key verified & saved ✓')));
+  }
 }

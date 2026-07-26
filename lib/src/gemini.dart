@@ -48,8 +48,10 @@ class GeminiException implements Exception {
 
 /// Minimal Gemini client (bring-your-own-key). Sends only the redacted prompt.
 class GeminiClient {
+  // gemini-flash-latest is a rolling alias to the current stable flash model, so
+  // this never deprecates out from under a user's key (as gemini-2.5-flash did).
   GeminiClient(this.apiKey,
-      {this.model = 'gemini-2.5-flash', http.Client? client})
+      {this.model = 'gemini-flash-latest', http.Client? client})
       : _client = client ?? http.Client();
 
   final String apiKey;
@@ -78,6 +80,95 @@ class GeminiClient {
     }
     final text = _extractText(jsonDecode(resp.body));
     return (text == null || text.trim().isEmpty) ? 'No answer found.' : text.trim();
+  }
+
+  /// Lightweight validity check for a key: one tiny request. Returns null if the
+  /// key works, else a short human-readable reason. Used to verify on Save so a
+  /// bad key is caught immediately, not at the first question.
+  Future<String?> verifyKey() async {
+    try {
+      final uri = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey');
+      final resp = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {'text': 'ping'}
+              ]
+            }
+          ]
+        }),
+      );
+      // 429 = valid key, just rate-limited — treat as OK.
+      if (resp.statusCode == 200 || resp.statusCode == 429) return null;
+      if (resp.statusCode == 400 || resp.statusCode == 401 || resp.statusCode == 403) {
+        return 'That key was rejected — check you copied all of it.';
+      }
+      if (resp.statusCode == 404) {
+        return 'This key can’t reach the model. Get a fresh one from aistudio.google.com.';
+      }
+      return 'Couldn’t verify the key (error ${resp.statusCode}).';
+    } catch (_) {
+      return 'Couldn’t reach Gemini — check your connection.';
+    }
+  }
+
+  /// Asks the model to cluster [records] into a few human-named folders, from
+  /// their redacted text only (never images, never full numbers). Returns one
+  /// group label per record, aligned by index; gaps fall back to 'Misc'.
+  Future<List<String>> groupRecords(List<ScreenshotRecord> records) async {
+    if (records.isEmpty) return const [];
+    final b = StringBuffer();
+    for (var i = 0; i < records.length; i++) {
+      final r = records[i];
+      final fields = r.fields.map((f) => '${f.label}: ${f.masked}').join(', ');
+      var snip = redactForLlm(r.ocrText).trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (snip.length > 120) snip = '${snip.substring(0, 120)}…';
+      final body = snip.isEmpty ? '(image, no readable text)' : snip;
+      b.writeln('${i + 1}. ${fields.isEmpty ? '' : '$fields — '}$body');
+    }
+    final prompt =
+        'Organize these phone screenshots into a few intuitive folders. Each '
+        'numbered line is one screenshot’s extracted text (sensitive numbers are '
+        'masked). Give every item a short Title Case folder name (1–2 words). '
+        'Reuse the same name for similar items and aim for 3–8 folders total. '
+        'Good names: Payments, Identity, Banking, Travel, Shopping, Receipts, '
+        'Passwords, Personal, Misc. Return ONLY a JSON object mapping each item '
+        'number (as a string) to its folder name.\n\n$b';
+
+    final uri = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey');
+    final resp = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {'text': prompt}
+            ]
+          }
+        ],
+        'generationConfig': {'responseMimeType': 'application/json'},
+      }),
+    );
+    if (resp.statusCode != 200) {
+      throw GeminiException('Grouping failed (${resp.statusCode}).');
+    }
+    final text = _extractText(jsonDecode(resp.body)) ?? '{}';
+    Map<String, dynamic> map;
+    try {
+      map = jsonDecode(text) as Map<String, dynamic>;
+    } catch (_) {
+      map = const {};
+    }
+    return List<String>.generate(records.length, (i) {
+      final v = map['${i + 1}'];
+      return (v is String && v.trim().isNotEmpty) ? v.trim() : 'Misc';
+    });
   }
 
   String? _extractText(dynamic data) {

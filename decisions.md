@@ -387,3 +387,36 @@ PicSearch."** Greeting is now time-aware instead of hardcoded "Good evening".
 
 **Consistency:** One `categoryChip()` helper now backs every list row (Vault,
 search, cleanup) so they share a single icon language.
+
+---
+
+## 16. Live E2E test surfaced real bugs — and shipped AI grouping
+
+Testing with a real Gemini key on the emulator (dummy card/PAN/Aadhaar/UPI/OTP
+images pushed to the gallery) turned up four things:
+
+**Corrupted Verhoeff table (Aadhaar checksum).** `_p` row 2 was
+`[5,8,0,3,7,9,6,1,4,2]` — indices 3–7 scrambled vs. the canonical
+`[5,8,0,9,1,6,7,3,4,2]`. It hid because our tests build the "valid" Aadhaar with
+our *own* `verhoeffCheckDigit`, so the wrong table stayed self-consistent (and a
+genuinely-valid Aadhaar was silently rejected). Fixed the row and added a guard
+test with an external anchor (`verhoeffCheckDigit('236') == 6`,
+`isValidVerhoeff('2366')`) that a self-consistent corruption can't pass.
+
+**Deprecated Gemini model.** Default was `gemini-2.5-flash`, which 404s for new
+API keys ("no longer available to new users"). Switched to the rolling
+`gemini-flash-latest` alias so it never deprecates from under a user again.
+
+**No key verification.** Settings stored any pasted string and said "saved". Now
+`GeminiClient.verifyKey()` does a tiny live request on Save — bad keys fail at
+entry, not at the first question. Settings also names the key source + model.
+
+**UPI missed without the scheme.** Detection required `upi://`; OCR often drops
+it. Added a bare-VPA fallback (`name@bank`), excluding emails by the no-TLD rule.
+
+**AI-based grouping (new feature, user request).** When a Gemini key is set, the
+Vault replaces the hard-coded type categories with AI-named smart folders. Only
+redacted text is sent (never images, never full numbers) — a `groupRecords` call
+returns one folder label per record, stored on the record (`aiGroup`), cached,
+and recomputed automatically after each scan or when a key is added. Falls back
+to the on-device type grouping when no key is set.

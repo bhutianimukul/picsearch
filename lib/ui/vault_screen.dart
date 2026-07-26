@@ -8,37 +8,129 @@ import 'cleanup_screen.dart';
 import 'record_detail.dart';
 import 'ui_helpers.dart';
 
-/// The "everything" view: categories with counts (the album grid, now a calm
-/// list). Tapping a category drills into its records.
+/// The "everything" view. With a Gemini key set, screenshots are grouped into
+/// AI-named smart folders; otherwise into the on-device type categories.
 class VaultScreen extends StatelessWidget {
   const VaultScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.pic;
     final state = AppScope.of(context);
-    final counts = state.categoryCounts;
-    final cats = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final ai = state.hasGemini;
+    final groups = _buildGroups(state);
     final cleanup = deletableCandidates(state.records);
+    final firstRun = ai && state.grouping && groups.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vault')),
+      appBar: AppBar(
+        title: const Text('Vault'),
+        actions: [
+          if (ai)
+            state.grouping
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 20),
+                    child: Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: c.accent),
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    icon: Icon(Icons.auto_awesome, color: c.accent, size: 20),
+                    tooltip: 'Regroup with AI',
+                    onPressed: () => state.regroupWithAi(),
+                  ),
+        ],
+      ),
       body: state.records.isEmpty
           ? const _Empty()
-          : Column(
-              children: [
-                if (cleanup.isNotEmpty) _CleanupBanner(count: cleanup.length),
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: cats.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 9),
-                    itemBuilder: (context, i) => _CategoryRow(category: cats[i], count: counts[cats[i]]!),
-                  ),
+          : firstRun
+              ? _SortingState(c: c)
+              : Column(
+                  children: [
+                    if (ai) _SmartHeader(c: c),
+                    if (cleanup.isNotEmpty) _CleanupBanner(count: cleanup.length),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: groups.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 9),
+                        itemBuilder: (context, i) =>
+                            _GroupRow(group: groups[i], aiMode: ai),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
     );
   }
+
+  List<_Group> _buildGroups(AppState state) {
+    if (state.hasGemini) {
+      final map = <String, List<ScreenshotRecord>>{};
+      for (final r in state.records) {
+        (map[r.aiGroup ?? 'Unsorted'] ??= <ScreenshotRecord>[]).add(r);
+      }
+      final keys = map.keys.toList()
+        ..sort((a, b) => map[b]!.length.compareTo(map[a]!.length));
+      return [for (final k in keys) _Group(k, groupChip(k), map[k]!)];
+    }
+    final map = <Category, List<ScreenshotRecord>>{};
+    for (final r in state.records) {
+      (map[r.category] ??= <ScreenshotRecord>[]).add(r);
+    }
+    final keys = map.keys.toList()
+      ..sort((a, b) => map[b]!.length.compareTo(map[a]!.length));
+    return [for (final k in keys) _Group(categoryLabel(k), categoryChip(k), map[k]!)];
+  }
+}
+
+class _Group {
+  _Group(this.label, this.chip, this.records);
+  final String label;
+  final Widget chip;
+  final List<ScreenshotRecord> records;
+}
+
+class _SmartHeader extends StatelessWidget {
+  const _SmartHeader({required this.c});
+  final PicColors c;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+        child: Row(children: [
+          Icon(Icons.auto_awesome, size: 14, color: c.accent),
+          const SizedBox(width: 7),
+          Text('Smart folders · grouped by AI',
+              style: TextStyle(fontSize: 12, color: c.inkDim)),
+        ]),
+      );
+}
+
+class _SortingState extends StatelessWidget {
+  const _SortingState({required this.c});
+  final PicColors c;
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: c.accent),
+            ),
+            const SizedBox(height: 18),
+            const Text('Sorting into smart folders…',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Text('Reading masked text only — never your images.',
+                style: TextStyle(color: c.inkDim, fontSize: 12.5)),
+          ],
+        ),
+      );
 }
 
 class _Empty extends StatelessWidget {
@@ -61,10 +153,10 @@ class _Empty extends StatelessWidget {
   }
 }
 
-class _CategoryRow extends StatelessWidget {
-  const _CategoryRow({required this.category, required this.count});
-  final Category category;
-  final int count;
+class _GroupRow extends StatelessWidget {
+  const _GroupRow({required this.group, required this.aiMode});
+  final _Group group;
+  final bool aiMode;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +167,8 @@ class _CategoryRow extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(13),
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => _CategoryScreen(category: category)),
+          MaterialPageRoute(
+              builder: (_) => _GroupScreen(title: group.label, aiMode: aiMode)),
         ),
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -85,11 +178,16 @@ class _CategoryRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              categoryChip(category),
+              group.chip,
               const SizedBox(width: 13),
-              Text(categoryLabel(category), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              const Spacer(),
-              Text('$count', style: dataStyle.copyWith(color: c.inkDim, fontSize: 13)),
+              Expanded(
+                child: Text(group.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              Text('${group.records.length}',
+                  style: dataStyle.copyWith(color: c.inkDim, fontSize: 13)),
               const SizedBox(width: 6),
               Icon(Icons.chevron_right, color: c.inkFaint, size: 20),
             ],
@@ -100,16 +198,21 @@ class _CategoryRow extends StatelessWidget {
   }
 }
 
-class _CategoryScreen extends StatelessWidget {
-  const _CategoryScreen({required this.category});
-  final Category category;
+class _GroupScreen extends StatelessWidget {
+  const _GroupScreen({required this.title, required this.aiMode});
+  final String title;
+  final bool aiMode;
 
   @override
   Widget build(BuildContext context) {
     final c = context.pic;
-    final records = AppScope.of(context).byCategory(category);
+    final records = AppScope.of(context).records.where((r) {
+      final key = aiMode ? (r.aiGroup ?? 'Unsorted') : categoryLabel(r.category);
+      return key == title;
+    }).toList();
+
     return Scaffold(
-      appBar: AppBar(title: Text(categoryLabel(category))),
+      appBar: AppBar(title: Text(title)),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: records.length,
@@ -133,7 +236,7 @@ class _CategoryScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    categoryChip(category, size: 38),
+                    categoryChip(r.category, size: 38),
                     const SizedBox(width: 13),
                     Expanded(
                       child: Column(
@@ -144,7 +247,7 @@ class _CategoryScreen extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
-                          Text(primary?.masked ?? categoryLabel(category),
+                          Text(primary?.masked ?? categoryLabel(r.category),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: dataStyle.copyWith(color: c.inkDim, fontSize: 13)),
@@ -163,7 +266,6 @@ class _CategoryScreen extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _CleanupBanner extends StatelessWidget {

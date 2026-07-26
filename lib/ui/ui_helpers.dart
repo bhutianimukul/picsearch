@@ -103,17 +103,54 @@ IconData categoryIcon(Category c) {
   }
 }
 
-/// The tinted rounded-square icon chip for a category. Shared by every list row
-/// (Vault, search results, cleanup) so the three read as one visual language.
-Widget categoryChip(Category c, {double size = 34}) => Container(
+/// The tinted rounded-square icon chip shared by every list row (Vault, search
+/// results, cleanup) so they read as one visual language.
+Widget iconChip(IconData icon, Color color, {double size = 34}) => Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: categoryColor(c).withValues(alpha: 0.16),
+        color: color.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(size * 0.28),
       ),
-      child: Icon(categoryIcon(c), size: size * 0.53, color: categoryColor(c)),
+      child: Icon(icon, size: size * 0.53, color: color),
     );
+
+Widget categoryChip(Category c, {double size = 34}) =>
+    iconChip(categoryIcon(c), categoryColor(c), size: size);
+
+/// Icon for an AI-assigned group name — matched by keyword, else a folder.
+IconData groupIcon(String label) {
+  final l = label.toLowerCase();
+  bool has(List<String> ks) => ks.any(l.contains);
+  if (has(['pay', 'upi', 'wallet', 'money', 'transfer'])) return Icons.payments_outlined;
+  if (has(['bank', 'ifsc', 'account', 'statement'])) return Icons.account_balance_outlined;
+  if (has(['ident', 'kyc', 'aadha', 'pan', 'passport', 'licen'])) return Icons.badge_outlined;
+  if (has(['card'])) return Icons.credit_card;
+  if (has(['travel', 'flight', 'trip', 'ticket', 'boarding', 'hotel'])) return Icons.flight_outlined;
+  if (has(['shop', 'order', 'receipt', 'invoice', 'bill', 'purchase'])) return Icons.receipt_long;
+  if (has(['pass', 'wifi', 'login', 'otp', 'code', 'credential', 'secret'])) return Icons.key_outlined;
+  if (has(['food', 'recipe', 'menu', 'restaurant'])) return Icons.restaurant;
+  if (has(['social', 'chat', 'message', 'contact'])) return Icons.chat_bubble_outline;
+  if (has(['photo', 'image', 'meme', 'wallpaper', 'misc'])) return Icons.image_outlined;
+  return Icons.folder_outlined;
+}
+
+/// A stable colour for an AI group name, drawn from the category palette.
+Color groupColor(String label) {
+  const palette = [
+    Color(0xFF5B9BD5), Color(0xFF7FBF6A), Color(0xFFE0A15E), Color(0xFFC98BE0),
+    Color(0xFF5FB0A0), Color(0xFFE08A8A), Color(0xFFE0B85E), Color(0xFF6AB0D0),
+    Color(0xFFE08FB8), Color(0xFF8FB96A),
+  ];
+  var h = 7;
+  for (final u in label.toLowerCase().codeUnits) {
+    h = (h * 31 + u) & 0x7fffffff;
+  }
+  return palette[h % palette.length];
+}
+
+Widget groupChip(String label, {double size = 34}) =>
+    iconChip(groupIcon(label), groupColor(label), size: size);
 
 /// A single extracted field: label, value (masked until revealed for sensitive
 /// ones), a biometric-style reveal toggle, and tap-to-copy.

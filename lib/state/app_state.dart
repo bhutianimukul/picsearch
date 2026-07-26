@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -27,6 +29,7 @@ class AppState extends ChangeNotifier {
   String? geminiKey;
   final Set<String> processedIds = <String>{};
   int newCount = 0;
+  bool grouping = false; // an AI regroup is in flight
 
   /// Load previously saved (encrypted) records on startup.
   Future<void> init() async {
@@ -93,6 +96,7 @@ class AppState extends ChangeNotifier {
     } finally {
       scanning = false;
       notifyListeners();
+      if (hasGemini) unawaited(regroupWithAi());
     }
   }
 
@@ -123,6 +127,7 @@ class AppState extends ChangeNotifier {
     } finally {
       scanning = false;
       notifyListeners();
+      if (hasGemini) unawaited(regroupWithAi());
     }
   }
 
@@ -143,7 +148,13 @@ class AppState extends ChangeNotifier {
     await _store.setGeminiKey(key);
     geminiKey = (key ?? '').trim().isEmpty ? null : key!.trim();
     notifyListeners();
+    // Turning AI on regroups the existing vault into smart folders.
+    if (hasGemini && records.isNotEmpty) unawaited(regroupWithAi());
   }
+
+  /// Returns null if [key] is a working Gemini key, else a short error message.
+  Future<String?> verifyGeminiKey(String key) =>
+      GeminiClient(key.trim()).verifyKey();
 
   Future<String> askGemini(String query) {
     final k = geminiKey;
@@ -151,6 +162,27 @@ class AppState extends ChangeNotifier {
       throw StateError('No Gemini key set');
     }
     return GeminiClient(k.trim()).ask(query, records);
+  }
+
+  /// Re-clusters the vault into AI-named folders from redacted text only. Runs
+  /// after a scan and when a key is added; leaves existing groups on failure.
+  Future<void> regroupWithAi() async {
+    final k = geminiKey;
+    if (k == null || k.trim().isEmpty || records.isEmpty || grouping) return;
+    grouping = true;
+    notifyListeners();
+    try {
+      final groups = await GeminiClient(k.trim()).groupRecords(records);
+      for (var i = 0; i < records.length && i < groups.length; i++) {
+        records[i] = records[i].copyWith(aiGroup: groups[i]);
+      }
+      await _store.save(records);
+    } catch (_) {
+      // keep whatever grouping we already have; Vault falls back where null
+    } finally {
+      grouping = false;
+      notifyListeners();
+    }
   }
 
   /// Insert new records at the front, then drop any duplicates (keeps newest).

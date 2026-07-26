@@ -108,22 +108,30 @@ class ScreenshotRecord {
   /// the auto-extracted ones.
   final List<ExtractedField> extra;
 
+  /// The AI-assigned group name, set when a Gemini key is active (see
+  /// AppState.regroupWithAi). Null until grouped; the Vault falls back to the
+  /// on-device [category] when this is absent.
+  final String? aiGroup;
+
   const ScreenshotRecord({
     required this.imagePath,
     required this.ocrText,
     required this.analysis,
     this.extra = const [],
+    this.aiGroup,
   });
 
   Category get category => analysis.category;
   List<ExtractedField> get fields => [...analysis.fields, ...extra];
 
-  ScreenshotRecord copyWith({String? imagePath, List<ExtractedField>? extra}) =>
+  ScreenshotRecord copyWith(
+          {String? imagePath, List<ExtractedField>? extra, String? aiGroup}) =>
       ScreenshotRecord(
         imagePath: imagePath ?? this.imagePath,
         ocrText: ocrText,
         analysis: analysis,
         extra: extra ?? this.extra,
+        aiGroup: aiGroup ?? this.aiGroup,
       );
 
   Map<String, dynamic> toJson() => {
@@ -131,6 +139,7 @@ class ScreenshotRecord {
         'ocrText': ocrText,
         'analysis': analysis.toJson(),
         'extra': extra.map((f) => f.toJson()).toList(),
+        'aiGroup': aiGroup,
       };
 
   factory ScreenshotRecord.fromJson(Map<String, dynamic> j) => ScreenshotRecord(
@@ -140,5 +149,6 @@ class ScreenshotRecord {
         extra: ((j['extra'] as List?) ?? const [])
             .map((e) => ExtractedField.fromJson(e as Map<String, dynamic>))
             .toList(),
+        aiGroup: j['aiGroup'] as String?,
       );
 }
