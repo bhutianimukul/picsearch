@@ -9,6 +9,7 @@ import '../src/models.dart';
 import '../src/validators.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import 'full_image_view.dart';
 import 'ui_helpers.dart';
 
 /// One screenshot's structured detail: a real (blur-gated) image preview, its
@@ -129,14 +130,29 @@ class _RecordDetailState extends State<RecordDetail> {
         fit: BoxFit.cover,
         errorBuilder: (_, _, _) => _placeholder(c));
 
+    // Clear (non-sensitive, or already revealed) — tap/hold to open full-screen.
     if (!sensitive || _imageRevealed) {
-      return ClipRRect(borderRadius: BorderRadius.circular(14), child: image);
+      return GestureDetector(
+        onTap: () => _openFull(record.imagePath),
+        onLongPress: () => _openFull(record.imagePath),
+        child: Stack(children: [
+          ClipRRect(borderRadius: BorderRadius.circular(14), child: image),
+          Positioned(right: 10, bottom: 10, child: _zoomHint()),
+        ]),
+      );
     }
 
+    // Sensitive + hidden — tap reveals inline; hold gates, then opens full-screen.
     return GestureDetector(
       onTap: () async {
         final ok = await Biometric().confirm('View this image');
         if (ok && mounted) setState(() => _imageRevealed = true);
+      },
+      onLongPress: () async {
+        final ok = await Biometric().confirm('View this image');
+        if (!ok || !mounted) return;
+        setState(() => _imageRevealed = true);
+        _openFull(record.imagePath);
       },
       child: Stack(children: [
         ClipRRect(
@@ -156,13 +172,31 @@ class _RecordDetailState extends State<RecordDetail> {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.lock_outline, color: c.ink, size: 22),
               const SizedBox(height: 6),
-              Text('Tap to view', style: TextStyle(color: c.ink, fontSize: 12)),
+              Text('Tap to view · hold for full screen',
+                  style: TextStyle(color: c.ink, fontSize: 12)),
             ]),
           ),
         ),
       ]),
     );
   }
+
+  Widget _zoomHint() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.zoom_out_map, size: 12, color: Colors.white),
+          SizedBox(width: 5),
+          Text('Hold to zoom', style: TextStyle(color: Colors.white, fontSize: 11)),
+        ]),
+      );
+
+  void _openFull(String path) => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => FullImageView(path: path)),
+      );
 
   Widget _placeholder(PicColors c) => Container(
         height: 148,

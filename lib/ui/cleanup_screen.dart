@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/app_state.dart';
 import '../theme.dart';
+import 'record_detail.dart';
 import 'ui_helpers.dart';
 
 /// Lists the screenshots PicSearch suggests clearing (OTP codes + duplicates)
@@ -29,34 +30,47 @@ class CleanupScreen extends StatelessWidget {
                     itemBuilder: (context, i) {
                       final r = candidates[i];
                       final primary = r.fields.isNotEmpty ? r.fields.first : null;
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: c.surface,
+                      return Material(
+                        color: c.surface,
+                        borderRadius: BorderRadius.circular(13),
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(13),
-                          border: Border.all(color: c.line),
-                        ),
-                        child: Row(
-                          children: [
-                            categoryChip(r.category),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(state.cleanupReason(r),
-                                      style: const TextStyle(
-                                          fontSize: 13.5, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 4),
-                                  Text(primary?.masked ?? _snippet(r.ocrText),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: dataStyle.copyWith(
-                                          color: c.inkDim, fontSize: 13)),
-                                ],
-                              ),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => RecordDetail(record: r)),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(13),
+                              border: Border.all(color: c.line),
                             ),
-                          ],
+                            child: Row(
+                              children: [
+                                categoryChip(r.category),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(state.cleanupReason(r),
+                                          style: const TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 4),
+                                      Text(primary?.masked ?? _snippet(r.ocrText),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: dataStyle.copyWith(
+                                              color: c.inkDim, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.chevron_right,
+                                    color: c.inkFaint, size: 20),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
