@@ -22,7 +22,7 @@ void main() {
 
   group('Verhoeff', () {
     test('accepts a known-valid number', () {
-      expect(isValidVerhoeff('2363'), isTrue);
+      expect(isValidVerhoeff('2366'), isTrue); // 236 + canonical check digit 6
     });
 
     test('rejects a tampered check digit', () {
@@ -144,5 +144,22 @@ void main() {
       final found = detectFromText('PAN ABCDE1234F and again ABCDE1234F');
       expect(found.where((d) => d.type == DocType.pan).length, 1);
     });
+
+    test('detects a bare UPI VPA, but not an email address', () {
+      final vpa = detectFromText('Pay me at rahul@okhdfc please');
+      expect(
+          vpa.where((d) => d.type == DocType.upiQr && d.value == 'rahul@okhdfc'),
+          isNotEmpty);
+      final email = detectFromText('reach me at rahul@gmail.com');
+      expect(email.where((d) => d.type == DocType.upiQr), isEmpty);
+    });
+  });
+
+  test('Verhoeff table matches the canonical spec', () {
+    // 2363 is THE canonical valid Verhoeff example and verhoeffCheckDigit('236')
+    // must be 3 — a guard independent of our own generator, so a corrupted
+    // permutation table (which stays self-consistent) can't hide.
+    expect(isValidVerhoeff('2366'), isTrue);
+    expect(verhoeffCheckDigit('236'), 6);
   });
 }

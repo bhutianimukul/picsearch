@@ -53,7 +53,7 @@ const _d = <List<int>>[
 const _p = <List<int>>[
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
   [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
-  [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+  [5, 8, 0, 9, 1, 6, 7, 3, 4, 2],
   [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
   [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
   [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
@@ -198,6 +198,15 @@ List<Detection> detectFromText(String text) {
     if (parsed != null) {
       add(DocType.upiQr, parsed['pa'] ?? raw, raw);
     }
+  }
+
+  // Bare UPI VPA (name@bank) — OCR frequently drops the "upi://" scheme, and
+  // most UPI screenshots print the handle in plain text anyway. Emails are
+  // excluded by requiring no dot after the handle (a VPA has no TLD).
+  for (final m in RegExp(r'\b[\w.-]{2,50}@[a-z][a-z0-9]{1,}\b(?!\.)',
+          caseSensitive: false)
+      .allMatches(text)) {
+    add(DocType.upiQr, m.group(0)!.toLowerCase(), m.group(0)!);
   }
 
   // Digit runs (with internal spaces/hyphens) → Aadhaar or card.
