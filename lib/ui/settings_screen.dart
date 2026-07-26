@@ -67,6 +67,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   setState(() => themeMode.value = v ? ThemeMode.dark : ThemeMode.light),
             ),
           ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: c.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.line),
+            ),
+            child: SwitchListTile(
+              value: state.deleteOriginals,
+              activeThumbColor: c.accent,
+              title: const Text('Also delete the original from my gallery'),
+              subtitle: Text(
+                state.deleteOriginals
+                    ? 'Remove clears it from PicSearch AND deletes the photo (Android asks you to confirm).'
+                    : 'Off — remove only clears it from PicSearch; the photo stays in your gallery.',
+                style: TextStyle(color: c.inkDim, fontSize: 12.5),
+              ),
+              secondary: Icon(Icons.auto_delete_outlined, color: c.accent),
+              onChanged: (v) => state.setDeleteOriginals(v),
+            ),
+          ),
           const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.all(16),
@@ -130,30 +151,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           _localModelCard(c, state),
-          const SizedBox(height: 24),
-          Text('WHEN YOU REMOVE A SCREENSHOT',
-              style: labelStyle.copyWith(color: c.inkFaint)),
-          const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: c.line),
-            ),
-            child: SwitchListTile(
-              value: state.deleteOriginals,
-              activeThumbColor: c.accent,
-              title: const Text('Also delete the original from my gallery'),
-              subtitle: Text(
-                state.deleteOriginals
-                    ? 'Remove clears it from PicSearch AND deletes the photo (Android asks you to confirm).'
-                    : 'Off — remove only clears it from PicSearch; the photo stays in your gallery.',
-                style: TextStyle(color: c.inkDim, fontSize: 12.5),
-              ),
-              secondary: Icon(Icons.auto_delete_outlined, color: c.accent),
-              onChanged: (v) => state.setDeleteOriginals(v),
-            ),
-          ),
         ],
       ),
     );
