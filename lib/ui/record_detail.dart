@@ -93,9 +93,17 @@ class _RecordDetailState extends State<RecordDetail> {
             const SizedBox(height: 9),
           ],
           OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              await state.removeRecords([record]);
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showSnackBar(
+                  const SnackBar(content: Text('Removed from PicSearch')));
+            },
             icon: const Icon(Icons.delete_outline),
-            label: const Text('Move to Vault & delete original'),
+            label: const Text('Remove from PicSearch'),
             style: OutlinedButton.styleFrom(
               foregroundColor: c.ink,
               side: BorderSide(color: c.line),
@@ -103,7 +111,7 @@ class _RecordDetailState extends State<RecordDetail> {
             ),
           ),
           const SizedBox(height: 8),
-          Text('The original screenshot stays in your gallery until you delete it.',
+          Text('This only clears it from PicSearch — the original screenshot stays in your gallery.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11.5, color: c.inkFaint)),
         ],

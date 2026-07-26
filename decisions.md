@@ -359,3 +359,31 @@ Android adaptive icon.
 the Kotlin package moved to match, and the repo folder `snapvault → picsearch`.
 The Dart package and `android:label` were already PicSearch (§10). New
 `applicationId` = fresh install identity, which is fine pre-launch.
+
+---
+
+## 15. UI audit pass: type identity + honest actions
+
+**The decision:** A design-audit sweep against the "Gen-Z / minimal" bar. The
+system was already disciplined (one accent, monochrome surfaces, colour
+quarantined to small chips); these were the refinements that moved it from
+"clean" to "considered".
+
+**Typography:** Bundled **Sora** (variable, OFL) as the app face. The whole UI
+was stock Roboto — the single biggest "default" tell. Sora is a geometric
+grotesk originally commissioned for a fintech identity, so it fits a private
+money-vault; monospace stays for extracted values (the data/prose contrast is
+deliberate).
+
+**Brand identity:** Unified on **search**, not the padlock. The launcher icon is
+a magnifying glass, so the home hero became one too; the decorative Vault
+app-bar lock was dropped. The padlock now appears only where it's *functional*
+(reveal gates, blurred preview) — not as decoration.
+
+**Honesty fixes:** The "Move to Vault & delete original" button was a no-op
+whose label also over-promised (the app deliberately never touches the gallery
+original). Wired it to `removeRecords` and relabelled **"Remove from
+PicSearch."** Greeting is now time-aware instead of hardcoded "Good evening".
+
+**Consistency:** One `categoryChip()` helper now backs every list row (Vault,
+search, cleanup) so they share a single icon language.

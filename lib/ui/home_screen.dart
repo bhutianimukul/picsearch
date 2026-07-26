@@ -28,7 +28,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text('Good evening', style: TextStyle(color: c.inkDim, fontSize: 13)),
+                    Text(_greeting(), style: TextStyle(color: c.inkDim, fontSize: 13)),
                     const Spacer(),
                     _AiStatusChip(hasGemini: state.hasGemini),
                   ],
@@ -73,6 +73,13 @@ void _openSearch(BuildContext context, [String query = '']) {
   Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => SearchScreen(initialQuery: query)),
   );
+}
+
+String _greeting() {
+  final h = DateTime.now().hour;
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 /// Top-right "AI on/off" chip. Tap for an info popup explaining how to enable
@@ -303,7 +310,7 @@ class _OrbitMarkState extends State<_OrbitMark> with SingleTickerProviderStateMi
             border: Border.all(color: c.accent.withValues(alpha: 0.26)),
             boxShadow: [BoxShadow(color: c.glow.withValues(alpha: 0.42), blurRadius: 46)],
           ),
-          child: Icon(Icons.lock_outline, color: c.accent, size: 38),
+          child: Icon(Icons.search, color: c.accent, size: 40),
         ),
       ),
     );

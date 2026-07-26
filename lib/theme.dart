@@ -122,7 +122,7 @@ final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.da
 
 ThemeData buildTheme(Brightness brightness) {
   final pic = brightness == Brightness.dark ? PicColors.dark : PicColors.light;
-  final base = ThemeData(brightness: brightness, useMaterial3: true);
+  final base = ThemeData(brightness: brightness, useMaterial3: true, fontFamily: 'Sora');
   return base.copyWith(
     scaffoldBackgroundColor: pic.ground,
     colorScheme: base.colorScheme.copyWith(

@@ -78,6 +78,13 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Sora (variable, OFL) — the app's display/body face. A geometric grotesk with
+  # more character than stock Roboto; monospace stays for extracted data values.
+  fonts:
+    - family: Sora
+      fonts:
+        - asset: assets/fonts/Sora.ttf
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

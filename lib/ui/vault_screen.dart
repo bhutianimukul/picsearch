@@ -15,17 +15,13 @@ class VaultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.pic;
     final state = AppScope.of(context);
     final counts = state.categoryCounts;
     final cats = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
     final cleanup = deletableCandidates(state.records);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vault'),
-        actions: [Padding(padding: const EdgeInsets.only(right: 16), child: Icon(Icons.lock_outline, color: c.inkDim))],
-      ),
+      appBar: AppBar(title: const Text('Vault')),
       body: state.records.isEmpty
           ? const _Empty()
           : Column(
@@ -89,15 +85,7 @@ class _CategoryRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: categoryColor(category).withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(categoryIcon(category), size: 18, color: categoryColor(category)),
-              ),
+              categoryChip(category),
               const SizedBox(width: 13),
               Text(categoryLabel(category), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const Spacer(),
@@ -145,15 +133,7 @@ class _CategoryScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: categoryColor(category).withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(categoryIcon(category), size: 19, color: categoryColor(category)),
-                    ),
+                    categoryChip(category, size: 38),
                     const SizedBox(width: 13),
                     Expanded(
                       child: Column(

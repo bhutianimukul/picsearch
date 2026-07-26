@@ -103,6 +103,18 @@ IconData categoryIcon(Category c) {
   }
 }
 
+/// The tinted rounded-square icon chip for a category. Shared by every list row
+/// (Vault, search results, cleanup) so the three read as one visual language.
+Widget categoryChip(Category c, {double size = 34}) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: categoryColor(c).withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(size * 0.28),
+      ),
+      child: Icon(categoryIcon(c), size: size * 0.53, color: categoryColor(c)),
+    );
+
 /// A single extracted field: label, value (masked until revealed for sensitive
 /// ones), a biometric-style reveal toggle, and tap-to-copy.
 class MaskedField extends StatefulWidget {

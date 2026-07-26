@@ -278,7 +278,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(categoryIcon(r.category), color: categoryColor(r.category), size: 20),
+                    categoryChip(r.category),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
