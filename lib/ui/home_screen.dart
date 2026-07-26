@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../state/app_state.dart';
 import '../theme.dart';
+import 'search_screen.dart';
 import 'ui_helpers.dart';
 
 /// Home A — ask-first. Ambient aurora + screenshots orbiting a vault mark, with
@@ -67,20 +68,29 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+void _openSearch(BuildContext context, [String query = '']) {
+  Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => SearchScreen(initialQuery: query)),
+  );
+}
+
 class _Ghost extends StatelessWidget {
   const _Ghost(this.text);
   final String text;
   @override
   Widget build(BuildContext context) {
     final c = context.pic;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
+    return GestureDetector(
+      onTap: () => _openSearch(context, text),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.line),
+        ),
+        child: Text(text, style: TextStyle(fontSize: 12, color: c.inkDim)),
       ),
-      child: Text(text, style: TextStyle(fontSize: 12, color: c.inkDim)),
     );
   }
 }
@@ -90,32 +100,35 @@ class _SearchDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.pic;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, color: c.inkFaint, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text('Ask, or hold to speak…',
-                style: TextStyle(color: c.inkFaint, fontSize: 15)),
-          ),
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: c.accent.withValues(alpha: 0.18),
-              boxShadow: [BoxShadow(color: c.glow.withValues(alpha: 0.45), blurRadius: 20)],
+    return GestureDetector(
+      onTap: () => _openSearch(context),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search, color: c.inkFaint, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text('Ask, or hold to speak…',
+                  style: TextStyle(color: c.inkFaint, fontSize: 15)),
             ),
-            child: Icon(Icons.mic_none, color: c.accent, size: 18),
-          ),
-        ],
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c.accent.withValues(alpha: 0.18),
+                boxShadow: [BoxShadow(color: c.glow.withValues(alpha: 0.45), blurRadius: 20)],
+              ),
+              child: Icon(Icons.mic_none, color: c.accent, size: 18),
+            ),
+          ],
+        ),
       ),
     );
   }
