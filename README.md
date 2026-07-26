@@ -305,5 +305,11 @@ See **[`FEATURES.md`](FEATURES.md)** for the full feature list and end goal.
 
 ---
 
+## License
+
+[MIT](LICENSE) © 2026 Mukul Bhutiani.
+
+---
+
 *Dart package `picsearch`, Android application id `com.mukul.picsearch`. The project
 was briefly named SnapVault pre-launch (see `decisions.md` §10).*
