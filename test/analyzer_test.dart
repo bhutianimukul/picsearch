@@ -23,4 +23,30 @@ void main() {
     expect(r.category, Category.otp);
     expect(r.tags, contains('deletable:otp'));
   });
+
+  test('UPI payee name — from the pn= param (url-decoded)', () {
+    final r = analyzeText('Pay upi://pay?pa=shop@okaxis&pn=Corner%20Store&am=250');
+    expect(r.category, Category.upiQr);
+    expect(
+        r.fields.any((f) => f.label == 'Payee name' && f.value == 'Corner Store'),
+        isTrue);
+  });
+
+  test('UPI payee name — from a name line next to a bare VPA', () {
+    final r = analyzeText('Scan & Pay\nRahul Sharma\nrahul@okhdfc');
+    expect(r.category, Category.upiQr);
+    expect(
+        r.fields.any((f) => f.label == 'Payee name' && f.value == 'Rahul Sharma'),
+        isTrue);
+  });
+
+  test('UPI with no discernible name adds no Payee name field', () {
+    final r = analyzeText('upi://pay?pa=anon@ybl');
+    expect(r.fields.any((f) => f.label == 'Payee name'), isFalse);
+  });
+
+  // upiPayeeName is null-safe for non-UPI text.
+  test('upiPayeeName returns null when there is no name/VPA', () {
+    expect(upiPayeeName('just some receipt text, total 450'), isNull);
+  });
 }
