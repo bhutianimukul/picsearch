@@ -291,3 +291,29 @@ signal, not decoration.
 ML Kit OCR → detect/verify → classify → sort. The card was read, **Luhn-verified**
 (badge shown), and masked to `••••6467`; PAN / wifi / receipt each categorised
 correctly. The whole pipeline runs on-device, no network.
+
+---
+
+## 12. Persistence: encrypted local vault
+
+**The decision:** Serialize records to JSON, **AES-256 encrypt** them with a key
+held in the **Android Keystore** (`flutter_secure_storage`), and write the
+ciphertext to app-private storage. Loaded on startup, saved after each scan.
+
+**Alternatives considered:**
+- *Plaintext JSON file* — simplest, rejected: it would store full card/Aadhaar
+  numbers in the clear, against the whole privacy thesis.
+- *SQLite / Hive / Isar* — a DB engine is overkill for a flat, append-mostly
+  record list; more deps and setup for no query benefit we need yet.
+- *Store the whole blob in flutter_secure_storage* — it's for small secrets, not
+  a growing JSON blob; so it holds only the 32-byte key.
+
+**Reasoning:** Encryption at rest matches the product's promise for the sensitive
+extracted values. Splitting the work — a **pure `VaultCodec`** (serialize +
+AES) plus a thin device-only `VaultStore` (Keystore + file) — means the
+encrypt/decrypt round-trip is **unit-tested without a device** (and a test
+asserts the plaintext card number is absent from the ciphertext).
+
+**Deliberately cut:** Cloud sync; per-record encryption; a DB engine. CBC gives
+confidentiality (the threat is another app / file access); GCM is the noted
+hardening upgrade if tamper-detection is wanted.

@@ -51,6 +51,22 @@ class ExtractedField {
     required this.masked,
     required this.sensitive,
   });
+
+  Map<String, dynamic> toJson() => {
+        'type': type.name,
+        'label': label,
+        'value': value,
+        'masked': masked,
+        'sensitive': sensitive,
+      };
+
+  factory ExtractedField.fromJson(Map<String, dynamic> j) => ExtractedField(
+        type: DocType.values.byName(j['type'] as String),
+        label: j['label'] as String,
+        value: j['value'] as String,
+        masked: j['masked'] as String,
+        sensitive: j['sensitive'] as bool,
+      );
 }
 
 /// The structured result of analysing one screenshot's OCR text: what it is,
@@ -65,6 +81,20 @@ class AnalysisResult {
     required this.fields,
     this.tags = const {},
   });
+
+  Map<String, dynamic> toJson() => {
+        'category': category.name,
+        'fields': fields.map((f) => f.toJson()).toList(),
+        'tags': tags.toList(),
+      };
+
+  factory AnalysisResult.fromJson(Map<String, dynamic> j) => AnalysisResult(
+        category: Category.values.byName(j['category'] as String),
+        fields: (j['fields'] as List)
+            .map((e) => ExtractedField.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        tags: (j['tags'] as List).map((e) => e as String).toSet(),
+      );
 }
 
 /// One analysed screenshot: where the image lives (on-device only), the OCR
@@ -82,4 +112,16 @@ class ScreenshotRecord {
 
   Category get category => analysis.category;
   List<ExtractedField> get fields => analysis.fields;
+
+  Map<String, dynamic> toJson() => {
+        'imagePath': imagePath,
+        'ocrText': ocrText,
+        'analysis': analysis.toJson(),
+      };
+
+  factory ScreenshotRecord.fromJson(Map<String, dynamic> j) => ScreenshotRecord(
+        imagePath: j['imagePath'] as String,
+        ocrText: j['ocrText'] as String,
+        analysis: AnalysisResult.fromJson(j['analysis'] as Map<String, dynamic>),
+      );
 }

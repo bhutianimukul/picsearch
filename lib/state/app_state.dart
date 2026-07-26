@@ -3,19 +3,30 @@ import 'package:image_picker/image_picker.dart';
 
 import '../src/models.dart';
 import '../src/scan_pipeline.dart';
+import '../src/vault_store.dart';
 
-/// Holds the analysed screenshot records and drives the gallery scan.
-/// In-memory for now; encrypted persistence is a later task (decisions §5/todo).
+/// Holds the analysed screenshot records, drives the gallery scan, and persists
+/// results (encrypted) between launches.
 class AppState extends ChangeNotifier {
-  AppState(this._pipeline);
+  AppState(this._pipeline, this._store);
 
   final ScanPipeline _pipeline;
+  final VaultStore _store;
   final ImagePicker _picker = ImagePicker();
 
   final List<ScreenshotRecord> records = <ScreenshotRecord>[];
   bool scanning = false;
 
-  /// Pick screenshots from the gallery and run them through the pipeline.
+  /// Load previously saved (encrypted) records on startup.
+  Future<void> init() async {
+    final saved = await _store.load();
+    records
+      ..clear()
+      ..addAll(saved);
+    notifyListeners();
+  }
+
+  /// Pick screenshots from the gallery, run the pipeline, persist.
   Future<int> scanFromGallery() async {
     if (scanning) return 0;
     final files = await _picker.pickMultiImage();
@@ -26,6 +37,7 @@ class AppState extends ChangeNotifier {
     try {
       final recs = await _pipeline.scanAll(files.map((f) => f.path));
       records.insertAll(0, recs);
+      await _store.save(records);
       return recs.length;
     } finally {
       scanning = false;
@@ -45,8 +57,7 @@ class AppState extends ChangeNotifier {
       records.where((r) => r.category == c).toList();
 }
 
-/// Makes [AppState] available down the widget tree and rebuilds dependents
-/// when it changes — no external state-management package needed.
+/// Makes [AppState] available down the tree and rebuilds dependents on change.
 class AppScope extends InheritedNotifier<AppState> {
   const AppScope({super.key, required AppState state, required super.child})
       : super(notifier: state);
